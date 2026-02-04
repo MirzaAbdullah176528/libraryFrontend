@@ -1,3 +1,4 @@
+'use client'
 import React from 'react';
 import { FiUser, FiMapPin } from 'react-icons/fi';
 
