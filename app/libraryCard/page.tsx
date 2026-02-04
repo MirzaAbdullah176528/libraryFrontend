@@ -1,3 +1,4 @@
+'use client'
 import React from 'react';
 import { FiMapPin, FiArrowRight } from 'react-icons/fi';
 
