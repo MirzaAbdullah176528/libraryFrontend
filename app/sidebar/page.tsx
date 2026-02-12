@@ -44,7 +44,7 @@ const Sidebar = ({ activeSection, onSectionChange, onSearch, onLogout }: Sidebar
           <input
             type="text"
             className="search-input"
-            placeholder="Search database..."
+            placeholder="Search..."
             value={query}
             onChange={handleSearchChange}
           />

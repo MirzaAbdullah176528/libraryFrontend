@@ -8,6 +8,7 @@ import BookCard from './card/page';
 import LibraryCard from './libraryCard/page';
 import { FiArrowRight } from 'react-icons/fi';
 
+
 interface Book {
   _id: string;
   name: string;
@@ -26,6 +27,7 @@ interface Library {
 export default function Home() {
   const router = useRouter();
   const [books, setBooks] = useState<Book[]>([]);
+  const [libraryBooks, setLibraryBooks] = useState<Book[]>([]);
   const [libraries, setLibraries] = useState<Library[]>([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<'books' | 'libraries'>('books');
@@ -35,9 +37,9 @@ export default function Home() {
     setLoading(true);
     try {
       if (view === 'books') {
-        const filters = query ? { name: query } : {}; 
+        const filters = query ? { name: query } : {};
         const res = await apiService.getBooks(filters);
-        setBooks(res.result || []); 
+        setBooks(res.result || []);
       } else {
         const filters = query ? { name: query } : {};
         const res = await apiService.getLibraries(filters);
@@ -57,7 +59,7 @@ export default function Home() {
     } else {
       fetchData(searchQuery);
     }
-  }, [router, view, fetchData]); 
+  }, [router, view, fetchData]);
 
   const handleSearch = (q: string) => {
     setSearchQuery(q);
@@ -70,7 +72,7 @@ export default function Home() {
 
   return (
     <div className="app-container">
-      <Sidebar 
+      <Sidebar
         activeSection={view}
         onSectionChange={setView}
         onSearch={handleSearch}
@@ -85,12 +87,12 @@ export default function Home() {
                 {view === 'books' ? 'The Collection' : 'Library Network'}
               </h1>
               <p className="section-subtitle">
-                {view === 'books' 
-                  ? 'Explore the curated list of available resources.' 
+                {view === 'books'
+                  ? 'Explore the curated list of available resources.'
                   : 'Find a branch near you to visit.'}
               </p>
             </div>
-            
+
             <button className="dashboard-link-btn" onClick={() => router.push('/dashboard')}>
               <span>My Dashboard</span>
               <FiArrowRight />

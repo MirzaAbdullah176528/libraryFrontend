@@ -1,4 +1,4 @@
-'use client'
+import Link from "next/link";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
@@ -11,12 +11,7 @@ interface RequestOptions {
 const request = async (endpoint: string, options: RequestOptions = {}) => {
   const { method = 'GET', body, params } = options;
   
-  const headers: Record<string, string> = {};
-  
-
-  if (!(body instanceof FormData)) {
-    headers['Content-Type'] = 'application/json';
-  }
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   
   if (typeof window !== 'undefined') {
     const token = localStorage.getItem('token');
@@ -34,7 +29,7 @@ const request = async (endpoint: string, options: RequestOptions = {}) => {
   const config: RequestInit = {
     method,
     headers,
-    body: body instanceof FormData ? body : (body ? JSON.stringify(body) : undefined)
+    body: body ? JSON.stringify(body) : undefined
   };
 
   try {
@@ -42,8 +37,6 @@ const request = async (endpoint: string, options: RequestOptions = {}) => {
     const data = await response.json();
 
     if (!response.ok) {
-      if (response.status === 401 && typeof window !== 'undefined') {
-      }
       throw new Error(data.error || 'API Request Failed');
     }
     return data;
@@ -108,12 +101,4 @@ export const apiService = {
   deleteBook: (id: string) => request(`/books/${id}`, { method: 'DELETE' }),
 
   updateUser: (id: string, userData: any) => request(`/auth/update/${id}`, { method: 'PATCH', body: userData }),
-
-  getLibraryBooks:(id: string) => request(`/libraries/${id}/books` , { method: 'GET' }),
-
-  getProfile:(id: string) => request(`/auth/profile/${id}` , { method: 'GET' }),
-
-  getRes:(prompt:{ name: string; category: string, topic: string }) =>
-    request('/chat' , { method:'POST' , body: prompt })
-
 };

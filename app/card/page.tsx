@@ -1,6 +1,6 @@
 'use client'
 import React from 'react';
-import { FiUser, FiMapPin } from 'react-icons/fi';
+import { User, MapPin } from 'lucide-react';
 
 interface BookProps {
   _id: string;
@@ -15,17 +15,29 @@ interface BookProps {
   };
 }
 
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
 const BookCard = ({ book }: { book: BookProps }) => {
+  
+  const getImageUrl = (imagePath?: string) => {
+    
+    if (!imagePath) return "/reading books is a key of success.webp";
+    
+    if (imagePath.startsWith('http')) return imagePath;
+    
+    return `${BASE_URL}${imagePath}`;
+  };
+
   return (
     <div className="book-card">
       <div className="book-image-container">
         <div className="book-overlay" />
         <img 
-          src={'https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&q=80&w=800'} 
+          src={getImageUrl(book.image)} 
           alt={book.name} 
           className="book-image"
           onError={(e) => {
-            e.currentTarget.src = "https://via.placeholder.com/400x300?text=No+Cover";
+            e.currentTarget.src = "/reading books is a key of success.webp";
           }}
         />
         <span className="book-category">{book.category}</span>
@@ -36,12 +48,12 @@ const BookCard = ({ book }: { book: BookProps }) => {
         
         <div className="book-meta">
           <div className="meta-item">
-            <FiUser size={14} />
+            <User size={14} />
             <span>{book.Created_By?.username || 'System'}</span>
           </div>
           <div className="meta-item">
-            <FiMapPin size={14} />
-            <span>{book.library?.name || 'Main Vault'}</span>
+            <MapPin size={14} />
+            <span>{book.library?.name || 'Unknown'}</span>
           </div>
         </div>
       </div>
@@ -51,6 +63,7 @@ const BookCard = ({ book }: { book: BookProps }) => {
           height: 220px;
           position: relative;
           overflow: hidden;
+          background: #0d1117;
         }
         .book-image {
           width: 100%;
