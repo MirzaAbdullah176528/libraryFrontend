@@ -75,7 +75,7 @@ const BookCard = ({ book }: { book: BookProps }) => {
         .book-category {
           position: absolute;
           top: 16px;
-          right: 16px;
+          left: 16px;
           background: rgba(0,0,0,0.6);
           backdrop-filter: blur(8px);
           color: white;

@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { apiService } from '../service/page';
-import { authService } from '../service/auth';
+import { apiService } from '../../service/api';
+import { authService } from '../../service/auth';
 import { FiUser, FiHash, FiLock, FiLogOut, FiCamera } from 'react-icons/fi';
 
 interface UserProfile {
@@ -17,25 +17,25 @@ export default function Profile() {
   const [user, setUser] = useState<UserProfile>();
   const [loading, setLoading] = useState(true);
 
- async function getUser(){
+  async function getUser() {
     let user = await authService.getCurrentUser();
-    
+
     if (user) {
       const userMetaData = {
         userId: user.userId || user._id || user.id,
         username: user.username || user.Username
       };
       let userData = await apiService.getProfile(userMetaData.userId)
-      if(userData){
-      const normalizedUser = {
-        _id: userData._id,
-        Username: userData.Username,
-        avatar: userData.avatar
-      }
+      if (userData) {
+        const normalizedUser = {
+          _id: userData._id,
+          Username: userData.Username,
+          avatar: userData.avatar
+        }
 
         setUser(normalizedUser);
       }
-      }
+    }
   }
 
   useEffect(() => {
@@ -69,7 +69,7 @@ export default function Profile() {
   useEffect(() => {
     getUser()
     console.log(user)
-    }, []);
+  }, []);
 
   const handleLogout = () => {
     authService.logout();

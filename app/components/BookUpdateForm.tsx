@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { FiX } from 'react-icons/fi';
-import { apiService } from '../service/page';
+import { apiService } from '../../service/api';
 
 interface Book {
   _id: string;

@@ -4,20 +4,20 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { FiUser, FiEye, FiEyeOff, FiLock, FiArrowRight, FiLayers } from 'react-icons/fi';
-import { authService } from '../service/page';
+import { authService } from '../../service/api';
 
-type props = { 
-    headerText?: string; 
-    apiUrl?: string; 
-    btnTextLoading?: string; 
+type props = {
+    headerText?: string;
+    apiUrl?: string;
+    btnTextLoading?: string;
     btnText?: string;
 }
 
-const LoginPage = ({ 
-    headerText = 'Welcome Back', 
-    apiUrl = '/login', 
-    btnTextLoading = 'Processing...', 
-    btnText = 'Log In' 
+const LoginPage = ({
+    headerText = 'Welcome Back to libris',
+    apiUrl = '/login',
+    btnTextLoading = 'Processing...',
+    btnText = 'Log In'
 }: props) => {
     const router = useRouter();
     const [showPassword, setShowPassword] = useState(false);
@@ -25,7 +25,7 @@ const LoginPage = ({
     const [error, setError] = useState('');
 
     const isSignup = apiUrl.includes('signup');
-    
+
     const [formData, setFormData] = useState({
         Username: '',
         password: ''
@@ -33,7 +33,7 @@ const LoginPage = ({
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
-        if(error) setError('');
+        if (error) setError('');
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -49,9 +49,9 @@ const LoginPage = ({
                 localStorage.setItem('token', data.token);
             }
             if (isSignup && !data.token) {
-                 router.push('/login');
+                router.push('/login');
             } else {
-                 router.push('/');
+                router.push('/');
             }
 
         } catch (err: any) {
@@ -65,16 +65,17 @@ const LoginPage = ({
         <div className="auth-container">
             <div className="auth-card">
                 <div className="form-side">
-                    <div className="brand-header">
-                        <div className="logo-icon">
-                            <FiLayers />
-                        </div>
-                        <span className="brand-name">Libris</span>
-                    </div>
+                        <div className="auth-content">
 
-                    <div className="auth-content">
+                        <div className="brand-header">
+                            <div className="logo-icon">
+                                <FiLayers />
+                            </div>
+                            <span className="brand-name">Libris</span>
+                        </div>
+                        
                         <header>
-                            <h1 className="title">{headerText}</h1>
+                            <h3 className="title">{headerText}</h3>
                             <p className="subtitle">
                                 {isSignup ? 'Already a member?' : 'New to Libris?'}
                                 <Link href={isSignup ? "/login" : "/signup"} className="auth-link">
@@ -93,7 +94,7 @@ const LoginPage = ({
                             <div className="input-group">
                                 <label>Username</label>
                                 <div className="input-wrapper">
-                                    <FiUser className="input-icon" />
+                                    <FiUser style={{ position:'absolute', margin:'0 15px' }} className="input-icon" />
                                     <input
                                         type="text"
                                         name="Username"
@@ -109,7 +110,7 @@ const LoginPage = ({
                             <div className="input-group">
                                 <label>Password</label>
                                 <div className="input-wrapper">
-                                    <FiLock className="input-icon" />
+                                    <FiLock style={{position:'absolute' , margin:'0 15px' }} className="input-icon" />
                                     <input
                                         type={showPassword ? "text" : "password"}
                                         name="password"
@@ -143,13 +144,20 @@ const LoginPage = ({
 
                 <div className="visual-side">
                     <div className="visual-content">
+                        <div className="brand-header">
+                            <div className="logo-icon">
+                                <FiLayers />
+                            </div>
+                            <span className="brand-name-sec2">Libris</span>
+                        </div>
+
                         <h2>Curated Knowledge.</h2>
                         <p>Access thousands of resources from our distributed library network.</p>
                     </div>
                     <div className="visual-overlay" />
-                    <img 
-                        src="https://images.unsplash.com/photo-1481627834876-b7833e8f5570?auto=format&fit=crop&q=80&w=2828" 
-                        alt="Library" 
+                    <img
+                        src="https://images.unsplash.com/photo-1481627834876-b7833e8f5570?auto=format&fit=crop&q=80&w=2828"
+                        alt="Library"
                         className="visual-bg"
                     />
                 </div>
@@ -161,8 +169,10 @@ const LoginPage = ({
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    background: #0f1115;
                     padding: 24px;
+                    background-image:Url('/login-background.webp');
+                    background-repeat:no-repeat;
+                    background-size:cover;
                 }
 
                 .auth-card {
@@ -175,6 +185,7 @@ const LoginPage = ({
                     display: flex;
                     box-shadow: 0 40px 80px -20px rgba(0,0,0,0.5);
                     border: 1px solid rgba(255,255,255,0.05);
+                    z-index:50
                 }
 
                 .form-side {
@@ -182,13 +193,17 @@ const LoginPage = ({
                     padding: 48px;
                     display: flex;
                     flex-direction: column;
-                    justify-content: space-between;
+                    align-item:center;
+                    justify-content:center;
                 }
 
                 .brand-header {
                     display: flex;
                     align-items: center;
                     gap: 12px;
+                    justify-content:flex-start;
+                    width:100%;
+                    maxWidth:360px;
                 }
 
                 .logo-icon {
@@ -200,13 +215,23 @@ const LoginPage = ({
                     align-items: center;
                     justify-content: center;
                     color: white;
+                    margin-bottom:10px
                 }
 
                 .brand-name {
-                    font-size: 1.25rem;
+                    font-size: 1.7rem;
                     font-weight: 700;
                     color: #fff;
-                    letter-spacing: -0.5px;
+                    letter-spacing: 2px;
+                    margin-bottom:10px
+                }
+
+                .brand-name-sec2 {
+                    font-size: 1.7rem;
+                    font-weight: 700;
+                    color: #fff;
+                    letter-spacing: 2px;
+                    margin-bottom:10px
                 }
 
                 .auth-content {
@@ -216,17 +241,20 @@ const LoginPage = ({
                 }
 
                 .title {
-                    font-size: 2rem;
+                    font-size: 1.84rem;
                     color: white;
-                    margin: 0 0 8px 0;
-                    font-weight: 700;
-                    letter-spacing: -0.02em;
+                    margin: 0 auto;
+                    font-weight: 800;
+                    letter-spacing: 0.10rem;
+
                 }
 
                 .subtitle {
                     color: #8b949e;
-                    margin: 0 0 32px 0;
+                    margin: 5px 0 30px 0;
                     font-size: 0.95rem;
+                    display:flex;
+                    gap:15px
                 }
 
                 .auth-link {
@@ -242,14 +270,14 @@ const LoginPage = ({
                 .auth-form {
                     display: flex;
                     flex-direction: column;
-                    gap: 24px;
+                    gap: 30px;
                 }
 
                 .input-group label {
                     display: block;
                     color: #8b949e;
                     font-size: 0.85rem;
-                    margin-bottom: 8px;
+                    margin-bottom: 10px;
                     font-weight: 500;
                 }
 
@@ -300,9 +328,9 @@ const LoginPage = ({
                 .password-toggle:hover { color: white; }
 
                 .submit-btn {
-                    margin-top: 8px;
+                    margin-top: 10px;
                     width: 100%;
-                    background: linear-gradient(180deg, #238636, #2ea043);
+                    background: linear-gradient(135deg, #58a6ff, #238636);
                     border: 1px solid rgba(255,255,255,0.1);
                     color: white;
                     padding: 14px;
@@ -366,7 +394,7 @@ const LoginPage = ({
 
                 .visual-content {
                     position: absolute;
-                    bottom: 48px;
+                    bottom: 75px;
                     left: 48px;
                     right: 48px;
                     z-index: 10;

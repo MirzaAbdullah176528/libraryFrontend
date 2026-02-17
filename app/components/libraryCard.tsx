@@ -1,8 +1,8 @@
 'use client'
 import React, { useState } from 'react';
 import { FiMapPin, FiArrowRight, FiEdit2, FiTrash2 } from 'react-icons/fi';
-import { apiService } from '../service/page';
-import BookCard from '../card/page';
+import { apiService } from '../../service/api';
+import BookCard from './bookCard';
 import Link from 'next/link';
 import LibraryBooksPage from '../LibraryBooks/page';
 
@@ -38,7 +38,7 @@ const LibraryCard = ({ library, onEdit, onDelete }: LibraryCardProps) => {
         </div>
         <div className="library-actions">
           {onEdit && (
-            <button 
+            <button
               className="action-btn edit-btn"
               onClick={onEdit}
             >
@@ -47,7 +47,7 @@ const LibraryCard = ({ library, onEdit, onDelete }: LibraryCardProps) => {
             </button>
           )}
           {onDelete && (
-            <button 
+            <button
               className="action-btn delete-btn"
               onClick={onDelete}
             >
@@ -57,7 +57,7 @@ const LibraryCard = ({ library, onEdit, onDelete }: LibraryCardProps) => {
           )}
         </div>
       </div>
-      
+
       <div className="info">
         <h3 className="lib-name">{library.name}</h3>
         {library.category && (
@@ -68,9 +68,9 @@ const LibraryCard = ({ library, onEdit, onDelete }: LibraryCardProps) => {
         <p className="lib-address">{library.address}</p>
       </div>
 
-      <Link style={{textDecoration:'none'}} href={`/LibraryBooks?id=${library._id}`}>
+      <Link style={{ textDecoration: 'none' }} href={`/LibraryBooks?id=${library._id}`}>
         <button
-        className="visit-btn">
+          className="visit-btn">
           <span>View Books</span>
           <FiArrowRight />
         </button>

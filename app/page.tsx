@@ -2,10 +2,10 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { apiService, authService } from './service/page';
+import { apiService, authService } from '../service/api';
 import Sidebar from './sidebar/page';
-import BookCard from './card/page';
-import LibraryCard from './libraryCard/page';
+import BookCard from './components/bookCard';
+import LibraryCard from './components/libraryCard';
 import { FiArrowRight } from 'react-icons/fi';
 
 
@@ -94,7 +94,7 @@ export default function Home() {
             </div>
 
             <button className="dashboard-link-btn" onClick={() => router.push('/dashboard')}>
-              <span>My Dashboard</span>
+              <span>Dashboard</span>
               <FiArrowRight />
             </button>
           </div>
@@ -159,9 +159,11 @@ export default function Home() {
           gap: 8px;
           transition: all 0.2s;
         }
-
+        
         .dashboard-link-btn:hover {
-          background: rgba(88, 166, 255, 0.2);
+          background: linear-gradient(135deg, #58a6ff, #238636);
+          color: #c1c1c1;
+          border: none;
           transform: translateX(4px);
         }
       `}</style>

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { FiX, FiCamera, FiUser } from 'react-icons/fi';
-import { apiService } from '../service/page';
+import { apiService } from '../../service/api';
 
 interface User {
   _id: string;
@@ -18,13 +18,13 @@ interface UserUpdateFormProps {
 
 const UserUpdateForm = ({ user, onUpdate, onClose }: UserUpdateFormProps) => {
   const id = user._id;
-  
-  
+
+
   const [formData, setFormData] = useState({
     newUsername: user.Username,
     newPassword: '',
   });
-  
+
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(user.avatar || null);
 
@@ -65,7 +65,7 @@ const UserUpdateForm = ({ user, onUpdate, onClose }: UserUpdateFormProps) => {
       if (formData.newUsername && formData.newUsername !== user.Username) {
         data.append('newUsername', formData.newUsername);
       }
-      
+
       if (formData.newPassword.trim()) {
         data.append('newPassword', formData.newPassword);
       }
@@ -86,7 +86,7 @@ const UserUpdateForm = ({ user, onUpdate, onClose }: UserUpdateFormProps) => {
 
       // 4. Send to API (apiService handles FormData automatically if implemented correctly)
       const updatedUser = await apiService.updateUser(id, data);
-      
+
       onUpdate(updatedUser.user || updatedUser); // Handle response structure
       onClose();
 
@@ -124,17 +124,17 @@ const UserUpdateForm = ({ user, onUpdate, onClose }: UserUpdateFormProps) => {
                 <FiUser className="default-avatar-icon" />
               )}
             </div>
-            
+
             <label htmlFor="image-upload" className="upload-btn">
               <FiCamera />
               <span>Change Photo</span>
             </label>
-            <input 
-              id="image-upload" 
-              type="file" 
-              accept="image/*" 
-              onChange={handleFileChange} 
-              hidden 
+            <input
+              id="image-upload"
+              type="file"
+              accept="image/*"
+              onChange={handleFileChange}
+              hidden
             />
           </div>
 

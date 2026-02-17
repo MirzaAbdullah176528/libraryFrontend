@@ -1,8 +1,8 @@
 'use client'
 
 import React, { useState, useEffect, useRef } from "react";
-import { apiService } from "../service/page";
-import { authService } from "../service/auth";
+import { apiService } from "../../service/api";
+import { authService } from "../../service/auth";
 
 interface Prompt {
   topic: string;
@@ -27,7 +27,7 @@ interface ChatMessage {
   name?: string;
   category?: string;
   library?: string;
-  disciption?:string
+  disciption?: string
   [key: string]: any;
 }
 
@@ -37,12 +37,12 @@ interface ApiData {
   library?: string;
 }
 
-const Loading = () =>{
-  
-    return (
-      <div className="dashboard-loading">
-        <div className="spinner"></div>
-         <style jsx>{`
+const Loading = () => {
+
+  return (
+    <div className="dashboard-loading">
+      <div className="spinner"></div>
+      <style jsx>{`
         .dashboard-loading {
           display: flex;
           flex-direction: column;
@@ -63,8 +63,9 @@ const Loading = () =>{
           to { transform: rotate(360deg); }
         }
       `}</style>
-      </div>
-    )}
+    </div>
+  )
+}
 
 export default function Chat() {
   const [isOpen, setIsOpen] = useState(false);
@@ -78,8 +79,9 @@ export default function Chat() {
   const [userLibraries, setUserLibraries] = useState<Library[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const resultsEndRef = useRef<HTMLDivElement>(null);
-  const [loading , setLoading] = useState(false)
-  let parsedData : any;
+  const [loading, setLoading] = useState(false)
+  const [uplaodEnable, setUplaodEnable] = useState(false)
+  let parsedData: any;
 
   useEffect(() => {
     const fetchedUser = authService.getCurrentUser();
@@ -143,10 +145,10 @@ export default function Chat() {
             const listData = chunk.split('\n');
             if (listData.length >= 6) {
               const jsonString = `${listData[1]} ${listData[2]} ${listData[3]} "library": "${lastLibrary._id}"}`;
-              
+
               parsedData = JSON.parse(jsonString);
               console.log(parsedData);
-              
+
               setMessages((prev) => [...prev, parsedData]);
             }
           } catch (parseError) {
@@ -160,10 +162,10 @@ export default function Chat() {
     }
   };
 
-  const uploadSugestion = async (data:ApiData)=>{    
+  const uploadSugestion = async (data: ApiData) => {
     setLoading(true)
     const uploadedBook = await apiService.createBook(data)
-    if(uploadedBook){
+    if (uploadedBook) {
       setLoading(false)
     }
     console.log(uploadedBook)
@@ -187,18 +189,19 @@ export default function Chat() {
                   <p>Ask a question to generate a response.</p>
                 </div>
               )}
-              
+
               {messages.map((msg, index) => (
                 <div key={index} className="message-card">
                   <div className="message-title">{msg.name || "Result"}</div>
                   <div className="message-desc">{msg.category || "No details provided"}</div>
                   <div>{msg.library}</div>
                   <div> {msg.discirption} </div>
-                  <button 
+                  <button
                     className="cta-btn"
-                    onClick={()=>uploadSugestion(msg)}
+                    onClick={() => { uploadSugestion(msg); setUplaodEnable(true) }}
+                    disabled={uplaodEnable}
                   >
-                    Upload?
+                    {loading ? <Loading /> : 'Upload'}
                   </button>
                 </div>
               ))}
@@ -234,7 +237,7 @@ export default function Chat() {
               />
 
               <button onClick={() => setLoading(true)} type="submit" className="submit-btn">
-                {loading? <Loading />: 'send' }
+                {loading ? <Loading /> : 'send'}
               </button>
             </form>
           </div>

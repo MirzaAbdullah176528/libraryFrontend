@@ -3,15 +3,17 @@
 import { useState, useEffect } from 'react';
 import { FiEdit2, FiTrash2, FiPlus, FiBook, FiBookOpen, FiUser, FiLogOut } from 'react-icons/fi';
 import BookUpdateForm from '../components/BookUpdateForm';
-import BookCard from '../card/page';
+import BookCard from '../components/bookCard';
 import BookCreateForm from '../components/BookCreateForm';
-import LibraryCard from '../libraryCard/page';
+import LibraryCard from '../components/libraryCard';
 import LibraryUpdateForm from '../components/libraryUpdatefoam';
 import UserUpdateForm from '../components/userUpdate';
-import { apiService } from '../service/page';
-import { authService } from '../service/page';
+import { apiService } from '../../service/api';
+import { authService } from '../../service/api';
 import Link from 'next/link';
 import Chat from '../components/chat';
+import { FiEye, FiEyeOff, FiLock, FiArrowRight, FiLayers } from 'react-icons/fi';
+import { BsFillBuildingFill } from 'react-icons/bs';
 
 interface Book {
   _id: string;
@@ -34,9 +36,9 @@ interface User {
   _id: string;
   Username: string;
   Password?: string;
-  userId?: string; 
-  username?: string; 
-  avatar?:string;
+  userId?: string;
+  username?: string;
+  avatar?: string;
 }
 
 type TabType = 'books' | 'libraries';
@@ -58,40 +60,40 @@ export default function Dashboard() {
     totalBooks: 0,
     totalLibraries: 0
   });
-  const [chatOpen , SetChatOpen] = useState(false)
-  
-  const [currentUser, setCurrentUser] = useState<any>({ userId: '', username: '', avatar:'' });
+  const [chatOpen, SetChatOpen] = useState(false)
 
-  const API_URL = 'http://localhost:5000'; 
+  const [currentUser, setCurrentUser] = useState<any>({ userId: '', username: '', avatar: '' });
 
-  async function getUser(){
+  const API_URL = 'http://localhost:5000';
+
+  async function getUser() {
     let user = await authService.getCurrentUser();
-    
+
     if (user) {
       const userMetaData = {
         userId: user.userId || user._id || user.id,
         username: user.username || user.Username
       };
       let userData = await apiService.getProfile(userMetaData.userId)
-      if(userData){
-      const normalizedUser = {
-        userId: userData._id,
-        username: userData.Username,
-        avatar: userData.avatar
-      }
+      if (userData) {
+        const normalizedUser = {
+          userId: userData._id,
+          username: userData.Username,
+          avatar: userData.avatar
+        }
 
         setCurrentUser(normalizedUser);
         fetchDashboardData(normalizedUser.userId);
-        console.log(user, currentUser , normalizedUser)
+        console.log(user, currentUser, normalizedUser)
       }
-      }
+    }
   }
 
   useEffect(() => {
     getUser()
 
-    }, []);
-    
+  }, []);
+
   const fetchDashboardData = async (userId: string) => {
     try {
       await Promise.all([
@@ -109,7 +111,7 @@ export default function Dashboard() {
       const res = await apiService.getBooks({ created_by: userId });
       const books = Array.isArray(res) ? res : (res.result || []);
       setUserBooks(books);
-      
+
       setUserStats(prev => ({
         ...prev,
         totalBooks: books.length,
@@ -125,24 +127,24 @@ export default function Dashboard() {
     setLoading(prev => ({ ...prev, libraries: true }));
     try {
       const res = await apiService.getLibraries();
-      
-      const libraries = Array.isArray(res) ? res : (res.result || []);
-      
-      const userLibs = userId 
-        ? libraries.filter((lib: Library) => {
-            const createdBy = lib.Created_By as any;
-            if (!createdBy) return false;
 
-            const createdById = createdBy.id || createdBy._id;
-            const createdByUsername = createdBy.username || createdBy.Username;
-            
-            return (
-              String(createdById) === String(userId) || 
-              createdByUsername === currentUser.username
-            );
-          })
+      const libraries = Array.isArray(res) ? res : (res.result || []);
+
+      const userLibs = userId
+        ? libraries.filter((lib: Library) => {
+          const createdBy = lib.Created_By as any;
+          if (!createdBy) return false;
+
+          const createdById = createdBy.id || createdBy._id;
+          const createdByUsername = createdBy.username || createdBy.Username;
+
+          return (
+            String(createdById) === String(userId) ||
+            createdByUsername === currentUser.username
+          );
+        })
         : libraries;
-      
+
       setUserLibraries(userLibs);
       setUserStats(prev => ({
         ...prev,
@@ -167,7 +169,7 @@ export default function Dashboard() {
 
   const handleEditUser = () => {
     const userData: User = {
-      avatar: currentUser?.avatar || 'no image' ,
+      avatar: currentUser?.avatar || 'no image',
       _id: currentUser?.userId || '1',
       Username: currentUser?.username || 'Demo User'
     };
@@ -177,16 +179,16 @@ export default function Dashboard() {
 
   const handleDeleteBook = async (bookId: string) => {
     if (!confirm('Are you sure you want to delete this book?')) return;
-    
+
     try {
       await apiService.deleteBook(bookId);
       setUserBooks(prev => prev.filter(book => book._id !== bookId));
-      
+
       setUserStats(prev => ({
         ...prev,
         totalBooks: prev.totalBooks - 1,
       }));
-      
+
       alert('Book deleted successfully!');
     } catch (error) {
       console.error(error);
@@ -196,16 +198,16 @@ export default function Dashboard() {
 
   const handleDeleteLibrary = async (libraryId: string) => {
     if (!confirm('Are you sure you want to delete this library?')) return;
-    
+
     try {
       await apiService.deleteLibrary(libraryId);
       setUserLibraries(prev => prev.filter(lib => lib._id !== libraryId));
-      
+
       setUserStats(prev => ({
         ...prev,
         totalLibraries: prev.totalLibraries - 1
       }));
-      
+
       alert('Library deleted successfully!');
     } catch (error) {
       console.error(error);
@@ -214,7 +216,7 @@ export default function Dashboard() {
   };
 
   const handleBookUpdateSuccess = (updatedBook: Book) => {
-    setUserBooks(prev => prev.map(book => 
+    setUserBooks(prev => prev.map(book =>
       book._id === updatedBook._id ? updatedBook : book
     ));
     setShowBookUpdateForm(false);
@@ -222,7 +224,7 @@ export default function Dashboard() {
   };
 
   const handleLibraryUpdateSuccess = (updatedLibrary: Library) => {
-    setUserLibraries(prev => prev.map(lib => 
+    setUserLibraries(prev => prev.map(lib =>
       lib._id === updatedLibrary._id ? updatedLibrary : lib
     ));
     setShowLibraryUpdateForm(false);
@@ -234,36 +236,36 @@ export default function Dashboard() {
       const user = authService.getCurrentUser();
       if (user) {
         user.username = updatedUser.Username;
-        
+
         if (updatedUser.avatar) {
-             user.avatar = updatedUser.avatar;
+          user.avatar = updatedUser.avatar;
         }
 
         localStorage.setItem('user', JSON.stringify(user));
       }
     }
-    
+
     setShowUserUpdateForm(false);
-    
+
     alert('User details updated successfully!');
     window.location.reload();
   };
 
   const handleCreateSuccess = (newItem: Book | Library) => {
     if ('category' in newItem && !('address' in newItem)) {
-      
+
       const book = newItem as Book;
       setUserBooks(prev => [...prev, book]);
-      
+
       setUserStats(prev => ({
         ...prev,
         totalBooks: prev.totalBooks + 1,
       }));
     } else {
-      
+
       const library = newItem as Library;
       setUserLibraries(prev => [...prev, library]);
-      
+
       setUserStats(prev => ({
         ...prev,
         totalLibraries: prev.totalLibraries + 1
@@ -303,8 +305,8 @@ export default function Dashboard() {
     };
   };
 
-  function ChatwithAi(){
-    return(
+  function ChatwithAi() {
+    return (
       < Chat />
     )
   }
@@ -322,7 +324,7 @@ export default function Dashboard() {
       <div className="dashboard-loading">
         <div className="spinner"></div>
         <p>Loading your dashboard...</p>
-         <style jsx>{`
+        <style jsx>{`
         .dashboard-loading {
           display: flex;
           flex-direction: column;
@@ -353,29 +355,18 @@ export default function Dashboard() {
     <div className="dashboard-container">
       <aside className="sidebar">
         <div className="sidebar-header">
-          <div className="user-info">
-            <div className="user-avatar">
-              <Link href={'/profile'}>
-              
-                {currentUser?.avatar ? (
-                  <img 
-                    src={`${API_URL}${currentUser.avatar}`} 
-                    alt="Profile" 
-                    style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '12px' }}
-                  />
-                ) : (
-                  <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
-                    <FiUser size={24} />
-                  </span>
-                )}
-              </Link>
-            </div>
-            <div>
-              <h3>{currentUser?.username || 'User'}</h3>
-              <p className="user-email">{currentUser?.username}</p>
-            </div>
+          <div style={{ display: 'flex', height: '100%' }}>
+            <Link style={{textDecoration:'none'}} href={'/'}>
+              <div className="brand-header">
+                  <div className="logo-icon">
+                      <FiLayers />
+                  </div>
+                  <span className="brand-name">Libris</span>
+              </div>
+            </Link>
           </div>
         </div>
+        
 
         <nav className="sidebar-nav">
           <div className="nav-section">
@@ -400,57 +391,72 @@ export default function Dashboard() {
 
           <div className="nav-section">
             <h4 className="section-title">Quick Actions</h4>
-            <button 
+            <button
               className="nav-btn create-btn"
               onClick={() => handleOpenCreateForm('book')}
             >
-              <FiPlus />
+              <FiBook />
               <span>Add New Book</span>
             </button>
-            <button 
+            <button
               className="nav-btn create-btn"
               onClick={() => handleOpenCreateForm('library')}
             >
-              <FiPlus />
+              <BsFillBuildingFill />
               <span>Add New Library</span>
             </button>
-          </div>
-        </nav>
-
-        <div className="sidebar-footer">
-          <button 
+            <h4 className="section-title-profile">Update Profile</h4>
+            <button
             className="nav-btn create-btn"
             onClick={handleEditUser}
           >
             <span>Update details</span>
           </button>
-          <button className="logout-btn" onClick={handleLogout}>
+          </div>
+        </nav>
+
+        <div className="sidebar-footer">
+          {/* <button className="logout-btn" onClick={handleLogout}>
             <FiLogOut />
             <span>Logout</span>
-          </button>
+          </button> */}
+
+          <div className="user-info">
+            <div className="user-avatar">
+              <Link href={'/profile'}>
+
+                {currentUser?.avatar ? (
+                  <img
+                    src={`${API_URL}${currentUser.avatar}`}
+                    alt="Profile"
+                    style={{ width: '40px', height: '40px', borderRadius: '50%' }}
+                  />
+                ) : (
+                  <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
+                    <FiUser size={24} />
+                  </span>
+                )}
+              </Link>
+            </div>
+            <div>
+              <h3>{currentUser?.username || 'User'}</h3>
+              <p className="user-email">{ currentUser.userId.slice(0,5)+'.......'+currentUser.userId.slice(18,-1) }</p>
+            </div>
+          </div>
         </div>
       </aside>
 
       <main className="main-content">
-        <Chat/>
+        <Chat />
 
         <header className="main-header">
           <div>
             <h1>{activeTab === 'books' ? 'My Books' : 'My Libraries'}</h1>
             <p className="subtitle">
-              {activeTab === 'books' 
-                ? 'Manage and organize your contributed books' 
+              {activeTab === 'books'
+                ? 'Manage and organize your contributed books'
                 : 'Manage your library collections'}
             </p>
-          </div>
-          <div style={{display:'flex', alignItems:'center' , justifyContent:'center' , height:'100%'}}>
-            <Link href={'/'}>
-              <button 
-                className="nav-btn create-btn"
-              >
-                <span style={{textDecoration:'none'}}>Home</span>
-              </button>
-            </Link>
           </div>
         </header>
 
@@ -465,7 +471,7 @@ export default function Dashboard() {
               <p className="stat-desc">Books you've contributed</p>
             </div>
           </div>
-          
+
           <div className="stat-card secondary">
             <div className="stat-icon">
               <FiBookOpen />
@@ -477,7 +483,7 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
-        
+
         <section className="content-section">
           <div className="section-header">
             <div>
@@ -485,13 +491,13 @@ export default function Dashboard() {
                 {activeTab === 'books' ? 'Book Collection' : 'Library Collection'}
               </h2>
               <p>
-                {activeTab === 'books' 
+                {activeTab === 'books'
                   ? 'All books you have added to the system'
                   : 'All libraries you have created'}
               </p>
             </div>
-            
-            <button 
+
+            <button
               className="add-btn"
               onClick={() => handleOpenCreateForm(activeTab === 'books' ? 'book' : 'library')}
             >
@@ -512,7 +518,7 @@ export default function Dashboard() {
                   <div className="empty-icon">📚</div>
                   <h3>No Books Yet</h3>
                   <p>Start by adding your first book to the collection</p>
-                  <button 
+                  <button
                     className="cta-btn"
                     onClick={() => handleOpenCreateForm('book')}
                   >
@@ -528,14 +534,14 @@ export default function Dashboard() {
                       <div key={safeBook._id} className="book-item">
                         <BookCard book={safeBook} />
                         <div className="item-actions">
-                          <button 
+                          <button
                             className="action-btn edit"
                             onClick={() => handleEditBook(safeBook)}
                             title="Edit book"
                           >
                             <FiEdit2 />
                           </button>
-                          <button 
+                          <button
                             className="action-btn delete"
                             onClick={() => handleDeleteBook(safeBook._id)}
                             title="Delete book"
@@ -563,7 +569,7 @@ export default function Dashboard() {
                   <div className="empty-icon">🏛️</div>
                   <h3>No Libraries Yet</h3>
                   <p>Create your first library to organize books</p>
-                  <button 
+                  <button
                     className="cta-btn"
                     onClick={() => handleOpenCreateForm('library')}
                   >
@@ -577,7 +583,7 @@ export default function Dashboard() {
                     const safeLibrary = getSafeLibrary(library);
                     return (
                       <div key={safeLibrary._id} className="library-item">
-                        <LibraryCard 
+                        <LibraryCard
                           library={{
                             _id: safeLibrary._id,
                             name: safeLibrary.name,
@@ -656,7 +662,7 @@ export default function Dashboard() {
           border-right: 1px solid rgba(255, 255, 255, 0.1);
           display: flex;
           flex-direction: column;
-          padding: 24px 0;
+          padding: 24px 0 0 0;
           position: sticky;
           top: 0;
           height: 100vh;
@@ -670,22 +676,51 @@ export default function Dashboard() {
         .user-info {
           display: flex;
           align-items: center;
-          gap: 12px;
+          gap: 15px;
+          margin-top:5px;
+          width:100%;
+          justify-content:flex-start
+        }
+        .sidebar-nav {
+          flex: 1;
+          padding: 24px 0;
+          overflow-y: auto;
+          
+          /* Add these lines to style the scrollbar */
+          scrollbar-width: thin; /* Firefox */
+          scrollbar-color: rgba(255, 255, 255, 0.1) transparent; /* Firefox */
         }
 
+        /* Webkit browsers (Chrome, Safari, Edge) */
+        .sidebar-nav::-webkit-scrollbar {
+          width: 6px;
+        }
+
+        .sidebar-nav::-webkit-scrollbar-track {
+          background: transparent;
+        }
+
+        .sidebar-nav::-webkit-scrollbar-thumb {
+          background-color: rgba(255, 255, 255, 0.1);
+          border-radius: 3px;
+        }
+
+        .sidebar-nav::-webkit-scrollbar-thumb:hover {
+          background-color: rgba(255, 255, 255, 0.2);
+        }
         .user-avatar {
-          width: 48px;
-          height: 48px;
-          background: linear-gradient(135deg, #58a6ff, #1f6feb);
-          border-radius: 12px;
+          // width: 40px;
+          height: 40px;
+          border-radius: 50%;
           display: flex;
-          align-items: center;
-          justify-content: center;
+          align-items: flex-start;
+          justify-content: flex-start;
+          // width:100%
         }
 
         .user-info h3 {
           margin: 0;
-          font-size: 1.1rem;
+          font-size: 1rem;
           font-weight: 600;
         }
 
@@ -714,6 +749,42 @@ export default function Dashboard() {
           margin: 0 0 16px;
           font-weight: 600;
         }
+        .section-title-profile {
+          color: #8b949e;
+          font-size: 0.8rem;
+          text-transform: uppercase;
+          letter-spacing: 1px;
+          margin: 20px 0 10px;
+          font-weight: 600;
+        }
+        .brand-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            justify-content:flex-start;
+            width:100%;
+        }
+        
+        .brand-name {
+            font-size: 1.7rem;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 2px;
+            margin-bottom:10px
+        }
+
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, #58a6ff, #238636);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            margin-bottom:10px
+        }
+
 
         .nav-btn {
           display: flex;
@@ -768,6 +839,11 @@ export default function Dashboard() {
         .sidebar-footer {
           padding: 24px;
           border-top: 1px solid rgba(255, 255, 255, 0.1);
+          display:flex;
+          align-item:center;
+          justify-content:center;
+          flex-direction:column;
+          gap:10px
         }
 
         .logout-btn {

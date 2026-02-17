@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import BookCard from '../card/page';
-import { apiService } from '../service/page';
+import BookCard from '../components/bookCard';
+import { apiService } from '../../service/api';
+import { Suspense } from 'react';
 
 interface Book {
   _id: string;
@@ -14,17 +15,17 @@ interface Book {
   library?: { name: string };
 }
 
-export default function LibraryBooksPage() {
+function LibraryPage() {
   const searchParams = useSearchParams();
   const libraryId = searchParams.get('id');
-  
+
   const [books, setBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchBooks() {
       if (!libraryId) return;
-      
+
       try {
         const res = await apiService.getLibraryBooks(libraryId);
         setBooks(res.books ?? []);
@@ -111,7 +112,7 @@ export default function LibraryBooksPage() {
         <h2>Library Collection</h2>
         <p className="subtitle">Browsing books in this library</p>
       </div>
-      
+
       <div className="books-grid">
         {books.map(book => (
           <BookCard key={book._id} book={book} />
@@ -158,5 +159,14 @@ export default function LibraryBooksPage() {
         }
       `}</style>
     </div>
+  );
+}
+
+
+export default function LibraryBooksPage() {
+  return (
+    <Suspense fallback={<div>Loading </div>}>
+      <LibraryPage />
+    </Suspense>
   );
 }

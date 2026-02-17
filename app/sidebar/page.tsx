@@ -40,7 +40,7 @@ const Sidebar = ({ activeSection, onSectionChange, onSearch, onLogout }: Sidebar
         </div>
 
         <div className="search-wrapper">
-          <FiSearch className="search-inner-icon" />
+          <FiSearch style={{position:'absolute', margin:'15px 15px' }} className="search-inner-icon" />
           <input
             type="text"
             className="search-input"
@@ -130,6 +130,9 @@ const Sidebar = ({ activeSection, onSectionChange, onSearch, onLogout }: Sidebar
         .search-wrapper {
           position: relative;
           margin-bottom: 32px;
+          display:flex;
+          align-item:flex-start;
+          justify-content:space-between
         }
 
         .search-inner-icon {
@@ -149,6 +152,9 @@ const Sidebar = ({ activeSection, onSectionChange, onSearch, onLogout }: Sidebar
           color: #fff;
           font-size: 14px;
           transition: all 0.2s;
+          display:flex;
+          align-item:center;
+          justify-content:center;
         }
 
         .search-input:focus {
@@ -174,11 +180,12 @@ const Sidebar = ({ activeSection, onSectionChange, onSearch, onLogout }: Sidebar
           transition: all 0.2s;
           position: relative;
           text-align: left;
+          width:100%
         }
 
         .nav-link:hover { background: #21262d; color: #fff; }
         
-        .nav-link.active { background: #1f2937; color: #58a6ff; }
+        .nav-link.active { background: linear-gradient(135deg, #58a6ff, #238636); color: #fff; }
 
         .nav-icon { font-size: 20px; }
 

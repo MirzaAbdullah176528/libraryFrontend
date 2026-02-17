@@ -1,7 +1,7 @@
 'use client'
 import React, { useState } from 'react';
 import { FiX } from 'react-icons/fi';
-import { apiService } from '../service/page';
+import { apiService } from '../../service/api';
 
 interface Library {
   _id: string;
@@ -40,15 +40,15 @@ const LibraryUpdateForm: React.FC<LibraryUpdateFormProps> = ({ library, onUpdate
 
     try {
       const response = await apiService.updateLibrary(library._id, formData);
-      
+
       // Debug: Log the response to see what the API returns
       console.log('Update library response:', response);
-      
+
       // Handle different response structures
       if (response.success || response._id || response.library) {
         // Extract the updated library from different possible response structures
         const updatedLibrary = response.library || response.result || response;
-        
+
         // Make sure we have the required fields
         if (updatedLibrary && updatedLibrary._id) {
           onUpdate(updatedLibrary);

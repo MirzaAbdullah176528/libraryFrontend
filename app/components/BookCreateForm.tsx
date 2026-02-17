@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { X, Upload } from 'lucide-react';
-import { apiService , authService } from '../service/page';
+import { apiService, authService } from '../../service/api';
 
 interface BookCreateFormProps {
   onSuccess: (item: any) => void;
@@ -16,7 +16,7 @@ const BookCreateForm = ({ onSuccess, onClose, category }: BookCreateFormProps) =
     category: '',
     library: '',
   });
-  
+
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
@@ -33,10 +33,10 @@ const BookCreateForm = ({ onSuccess, onClose, category }: BookCreateFormProps) =
     fetchLibraries();
     const user = authService.getCurrentUser();
     if (user) {
-        setCurrentUser(user);
+      setCurrentUser(user);
     }
-    
-    
+
+
     return () => {
       if (previewUrl) URL.revokeObjectURL(previewUrl);
     };
@@ -53,7 +53,7 @@ const BookCreateForm = ({ onSuccess, onClose, category }: BookCreateFormProps) =
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    
+
     if (category === 'book') {
       setFormData({ ...formData, [name]: value });
     } else {
@@ -65,8 +65,8 @@ const BookCreateForm = ({ onSuccess, onClose, category }: BookCreateFormProps) =
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       setSelectedFile(file);
-      
-      
+
+
       if (previewUrl) URL.revokeObjectURL(previewUrl);
       setPreviewUrl(URL.createObjectURL(file));
     }
@@ -95,11 +95,11 @@ const BookCreateForm = ({ onSuccess, onClose, category }: BookCreateFormProps) =
         formDataPayload.append('name', formData.name);
         formDataPayload.append('category', formData.category);
         formDataPayload.append('library', formData.library);
-        
+
         if (selectedFile) {
           formDataPayload.append('image', selectedFile);
         }
-        
+
         const newBook = await apiService.createBook(formDataPayload);
         onSuccess(newBook.book || newBook);
       } else {
@@ -110,7 +110,7 @@ const BookCreateForm = ({ onSuccess, onClose, category }: BookCreateFormProps) =
             username: currentUser?.username
           }
         };
-        
+
         const newLibrary = await apiService.createLibrary(libraryDataWithUser);
         onSuccess(newLibrary.library || newLibrary);
       }
@@ -242,7 +242,7 @@ const BookCreateForm = ({ onSuccess, onClose, category }: BookCreateFormProps) =
               Cancel
             </button>
             <button type="submit" className="submit-btn" disabled={loading}>
-              {loading 
+              {loading
                 ? (category === 'book' ? 'Creating...' : 'Adding...')
                 : (category === 'book' ? 'Create Book' : 'Add Library')
               }
