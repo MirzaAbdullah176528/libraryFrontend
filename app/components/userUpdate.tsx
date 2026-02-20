@@ -1,24 +1,24 @@
 'use client'
 
 import { useState, useEffect } from 'react';
-import { FiX, FiCamera, FiUser } from 'react-icons/fi';
+import { FiX, FiCamera, FiUser, FiTrash2 } from 'react-icons/fi';
 import { apiService } from '../../service/api';
 
 interface User {
   _id: string;
   Username: string;
-  avatar?: string; // Added avatar to interface
+  avatar?: string;
 }
 
 interface UserUpdateFormProps {
   user: User;
   onUpdate: (updatedUser: User) => void;
+  onDelete: () => Promise<void>;  // FIX: added onDelete to props interface
   onClose: () => void;
 }
 
-const UserUpdateForm = ({ user, onUpdate, onClose }: UserUpdateFormProps) => {
+const UserUpdateForm = ({ user, onUpdate, onDelete, onClose }: UserUpdateFormProps) => {
   const id = user._id;
-
 
   const [formData, setFormData] = useState({
     newUsername: user.Username,
@@ -27,8 +27,8 @@ const UserUpdateForm = ({ user, onUpdate, onClose }: UserUpdateFormProps) => {
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(user.avatar || null);
-
   const [loading, setLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -47,7 +47,6 @@ const UserUpdateForm = ({ user, onUpdate, onClose }: UserUpdateFormProps) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       setSelectedFile(file);
-      // Create a local preview URL
       setPreviewUrl(URL.createObjectURL(file));
     }
   };
@@ -58,10 +57,8 @@ const UserUpdateForm = ({ user, onUpdate, onClose }: UserUpdateFormProps) => {
     setError('');
 
     try {
-      // 1. We MUST use FormData to send files
       const data = new FormData();
 
-      // 2. Append text fields only if they have changed/exist
       if (formData.newUsername && formData.newUsername !== user.Username) {
         data.append('newUsername', formData.newUsername);
       }
@@ -70,13 +67,10 @@ const UserUpdateForm = ({ user, onUpdate, onClose }: UserUpdateFormProps) => {
         data.append('newPassword', formData.newPassword);
       }
 
-      // 3. Append the file if selected
       if (selectedFile) {
-        data.append('image', selectedFile); // 'image' matches your backend middleware
+        data.append('image', selectedFile);
       }
 
-      // Check if Form has any data
-      // Note: FormData keys iterator is available in modern browsers
       const hasData = Array.from(data.keys()).length > 0;
 
       if (!hasData) {
@@ -84,17 +78,24 @@ const UserUpdateForm = ({ user, onUpdate, onClose }: UserUpdateFormProps) => {
         return;
       }
 
-      // 4. Send to API (apiService handles FormData automatically if implemented correctly)
       const updatedUser = await apiService.updateUser(id, data);
-
-      onUpdate(updatedUser.user || updatedUser); // Handle response structure
+      onUpdate(updatedUser.user || updatedUser);
       onClose();
-
     } catch (err: any) {
       console.error(err);
       setError(err.message || 'Failed to update user');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // FIX: wraps onDelete with local loading state so the button shows feedback
+  const handleDelete = async () => {
+    setDeleteLoading(true);
+    try {
+      await onDelete();
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -110,12 +111,9 @@ const UserUpdateForm = ({ user, onUpdate, onClose }: UserUpdateFormProps) => {
 
         <form onSubmit={handleSubmit} className="user-form">
           {error && (
-            <div className="error-message">
-              {error}
-            </div>
+            <div className="error-message">{error}</div>
           )}
 
-          {/* IMAGE UPLOAD SECTION */}
           <div className="avatar-upload-container">
             <div className="avatar-preview">
               {previewUrl ? (
@@ -124,7 +122,6 @@ const UserUpdateForm = ({ user, onUpdate, onClose }: UserUpdateFormProps) => {
                 <FiUser className="default-avatar-icon" />
               )}
             </div>
-
             <label htmlFor="image-upload" className="upload-btn">
               <FiCamera />
               <span>Change Photo</span>
@@ -166,12 +163,24 @@ const UserUpdateForm = ({ user, onUpdate, onClose }: UserUpdateFormProps) => {
           </div>
 
           <div className="form-footer">
-            <button type="button" onClick={onClose} className="cancel-btn">
-              Cancel
+            <button
+              type="button"
+              onClick={handleDelete}
+              className="delete-btn"
+              disabled={deleteLoading || loading}
+            >
+              <FiTrash2 />
+              {deleteLoading ? 'Deleting...' : 'Delete Account'}
             </button>
-            <button type="submit" className="submit-btn" disabled={loading}>
-              {loading ? 'Updating...' : 'Update Profile'}
-            </button>
+
+            <div className="footer-right">
+              <button type="button" onClick={onClose} className="cancel-btn">
+                Cancel
+              </button>
+              <button type="submit" className="submit-btn" disabled={loading || deleteLoading}>
+                {loading ? 'Updating...' : 'Update Profile'}
+              </button>
+            </div>
           </div>
         </form>
       </div>
@@ -230,11 +239,8 @@ const UserUpdateForm = ({ user, onUpdate, onClose }: UserUpdateFormProps) => {
           color: white;
         }
 
-        .user-form {
-          padding: 24px;
-        }
+        .user-form { padding: 24px; }
 
-        /* Avatar Styling */
         .avatar-upload-container {
           display: flex;
           flex-direction: column;
@@ -255,16 +261,9 @@ const UserUpdateForm = ({ user, onUpdate, onClose }: UserUpdateFormProps) => {
           justify-content: center;
         }
 
-        .avatar-preview img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-        }
+        .avatar-preview img { width: 100%; height: 100%; object-fit: cover; }
 
-        .default-avatar-icon {
-          font-size: 48px;
-          color: #8b949e;
-        }
+        .default-avatar-icon { font-size: 48px; color: #8b949e; }
 
         .upload-btn {
           display: flex;
@@ -279,13 +278,9 @@ const UserUpdateForm = ({ user, onUpdate, onClose }: UserUpdateFormProps) => {
           transition: background 0.2s;
         }
 
-        .upload-btn:hover {
-          background: rgba(88, 166, 255, 0.2);
-        }
+        .upload-btn:hover { background: rgba(88, 166, 255, 0.2); }
 
-        .form-group {
-          margin-bottom: 20px;
-        }
+        .form-group { margin-bottom: 20px; }
 
         .form-group label {
           display: block;
@@ -304,6 +299,7 @@ const UserUpdateForm = ({ user, onUpdate, onClose }: UserUpdateFormProps) => {
           color: white;
           font-size: 0.95rem;
           transition: all 0.2s;
+          box-sizing: border-box;
         }
 
         .form-group input:focus {
@@ -322,11 +318,41 @@ const UserUpdateForm = ({ user, onUpdate, onClose }: UserUpdateFormProps) => {
 
         .form-footer {
           display: flex;
+          align-items: center;
+          justify-content: space-between;
           gap: 12px;
-          justify-content: flex-end;
           margin-top: 32px;
           padding-top: 20px;
           border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .footer-right {
+          display: flex;
+          gap: 12px;
+        }
+
+        .delete-btn {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          background: rgba(248, 81, 73, 0.1);
+          border: 1px solid rgba(248, 81, 73, 0.2);
+          color: #ff7b72;
+          padding: 12px 18px;
+          border-radius: 12px;
+          cursor: pointer;
+          font-weight: 500;
+          font-size: 0.9rem;
+          transition: all 0.2s;
+        }
+
+        .delete-btn:hover:not(:disabled) {
+          background: rgba(248, 81, 73, 0.2);
+        }
+
+        .delete-btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
         }
 
         .cancel-btn {

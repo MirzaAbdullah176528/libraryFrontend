@@ -10,7 +10,6 @@ const request = async (endpoint: string, options: RequestOptions = {}) => {
   const { method = 'GET', body, params } = options;
   
   const headers: Record<string, string> = {};
-  
 
   if (!(body instanceof FormData)) {
     headers['Content-Type'] = 'application/json';
@@ -40,9 +39,7 @@ const request = async (endpoint: string, options: RequestOptions = {}) => {
     const data = await response.json();
 
     if (!response.ok) {
-      if (response.status === 401 && typeof window !== 'undefined') {
-      }
-      throw new Error(data.error || 'API Request Failed');
+      throw new Error(data.error || data.message || 'API Request Failed');
     }
     return data;
   } catch (error) {
@@ -52,8 +49,20 @@ const request = async (endpoint: string, options: RequestOptions = {}) => {
 
 export const authService = {
   login: (credentials: any) => request('/auth/login', { method: 'POST', body: credentials }),
-  
-  signup: (userData: any) => request('/auth/signup', { method: 'POST', body: userData }),
+
+  // FIX: signup now sends FormData so multer can parse it correctly.
+  // Previously sent JSON, but the backend signup route uses multer middleware
+  // which prevents express.json() from populating req.body — causing Username
+  // and password to arrive as undefined, storing a hash of undefined.
+  signup: (userData: { Username: string; password: string; image?: File }) => {
+    const formData = new FormData();
+    formData.append('Username', userData.Username);
+    formData.append('password', userData.password);
+    if (userData.image) {
+      formData.append('image', userData.image);
+    }
+    return request('/auth/signup', { method: 'POST', body: formData });
+  },
   
   logout: () => {
     if (typeof window !== 'undefined') {
@@ -92,8 +101,8 @@ export const apiService = {
   getLibraries: (filters: { name?: string; address?: string } = {}) => 
     request('/libraries', { params: filters as Record<string, string> }),
 
-  createLibrary:(data:{ name?: string; address?: string }) =>
-    request('/libraries', { method:'POST' , body: data }),
+  createLibrary: (data: { name?: string; address?: string }) =>
+    request('/libraries', { method: 'POST', body: data }),
 
   deleteLibrary: (id: string) => request(`/libraries/${id}`, { method: 'DELETE' }),
 
@@ -107,11 +116,12 @@ export const apiService = {
 
   updateUser: (id: string, userData: any) => request(`/auth/update/${id}`, { method: 'PATCH', body: userData }),
 
-  getLibraryBooks:(id: string) => request(`/libraries/${id}/books` , { method: 'GET' }),
+  deleteUser: (id: string) => request(`/auth/delete/${id}`, { method: 'DELETE' }),
 
-  getProfile:(id: string) => request(`/auth/profile/${id}` , { method: 'GET' }),
+  getLibraryBooks: (id: string) => request(`/libraries/${id}/books`, { method: 'GET' }),
 
-  getRes:(prompt:{ name: string; category: string, topic: string }) =>
-    request('/chat' , { method:'POST' , body: prompt })
+  getProfile: (id: string) => request(`/auth/profile/${id}`, { method: 'GET' }),
 
+  getRes: (prompt: { name: string; category: string; topic: string }) =>
+    request('/chat', { method: 'POST', body: prompt }),
 };

@@ -20,6 +20,7 @@ interface Book {
   name: string;
   category: string;
   image?: string;
+  author?: string;
   library?: { name: string; _id: string };
   Created_By?: { username: string };
 }
@@ -60,8 +61,8 @@ export default function Dashboard() {
     totalBooks: 0,
     totalLibraries: 0
   });
-  const [chatOpen, SetChatOpen] = useState(false)
 
+  
   const [currentUser, setCurrentUser] = useState<any>({ userId: '', username: '', avatar: '' });
 
   const API_URL = 'http://localhost:5000';
@@ -83,22 +84,20 @@ export default function Dashboard() {
         }
 
         setCurrentUser(normalizedUser);
-        fetchDashboardData(normalizedUser.userId);
-        console.log(user, currentUser, normalizedUser)
+        fetchDashboardData(normalizedUser.userId, normalizedUser.username);
       }
     }
   }
 
   useEffect(() => {
     getUser()
-
   }, []);
 
-  const fetchDashboardData = async (userId: string) => {
+  const fetchDashboardData = async (userId: string, username: string) => {
     try {
       await Promise.all([
         fetchUserBooks(userId),
-        fetchUserLibraries(userId)
+        fetchUserLibraries(userId, username)
       ]);
     } catch (error) {
       console.error(error);
@@ -111,11 +110,7 @@ export default function Dashboard() {
       const res = await apiService.getBooks({ created_by: userId });
       const books = Array.isArray(res) ? res : (res.result || []);
       setUserBooks(books);
-
-      setUserStats(prev => ({
-        ...prev,
-        totalBooks: books.length,
-      }));
+      setUserStats(prev => ({ ...prev, totalBooks: books.length }));
     } catch (error) {
       console.error(error);
     } finally {
@@ -123,33 +118,27 @@ export default function Dashboard() {
     }
   };
 
-  const fetchUserLibraries = async (userId: string) => {
+  const fetchUserLibraries = async (userId: string, username: string) => {
     setLoading(prev => ({ ...prev, libraries: true }));
     try {
       const res = await apiService.getLibraries();
-
       const libraries = Array.isArray(res) ? res : (res.result || []);
 
       const userLibs = userId
         ? libraries.filter((lib: Library) => {
-          const createdBy = lib.Created_By as any;
-          if (!createdBy) return false;
-
-          const createdById = createdBy.id || createdBy._id;
-          const createdByUsername = createdBy.username || createdBy.Username;
-
-          return (
-            String(createdById) === String(userId) ||
-            createdByUsername === currentUser.username
-          );
-        })
+            const createdBy = lib.Created_By as any;
+            if (!createdBy) return false;
+            const createdById = createdBy.id || createdBy._id;
+            const createdByUsername = createdBy.username || createdBy.Username;
+            return (
+              String(createdById) === String(userId) ||
+              createdByUsername === username
+            );
+          })
         : libraries;
 
       setUserLibraries(userLibs);
-      setUserStats(prev => ({
-        ...prev,
-        totalLibraries: userLibs.length
-      }));
+      setUserStats(prev => ({ ...prev, totalLibraries: userLibs.length }));
     } catch (error) {
       console.error(error);
     } finally {
@@ -179,16 +168,10 @@ export default function Dashboard() {
 
   const handleDeleteBook = async (bookId: string) => {
     if (!confirm('Are you sure you want to delete this book?')) return;
-
     try {
       await apiService.deleteBook(bookId);
       setUserBooks(prev => prev.filter(book => book._id !== bookId));
-
-      setUserStats(prev => ({
-        ...prev,
-        totalBooks: prev.totalBooks - 1,
-      }));
-
+      setUserStats(prev => ({ ...prev, totalBooks: prev.totalBooks - 1 }));
       alert('Book deleted successfully!');
     } catch (error) {
       console.error(error);
@@ -198,16 +181,10 @@ export default function Dashboard() {
 
   const handleDeleteLibrary = async (libraryId: string) => {
     if (!confirm('Are you sure you want to delete this library?')) return;
-
     try {
       await apiService.deleteLibrary(libraryId);
       setUserLibraries(prev => prev.filter(lib => lib._id !== libraryId));
-
-      setUserStats(prev => ({
-        ...prev,
-        totalLibraries: prev.totalLibraries - 1
-      }));
-
+      setUserStats(prev => ({ ...prev, totalLibraries: prev.totalLibraries - 1 }));
       alert('Library deleted successfully!');
     } catch (error) {
       console.error(error);
@@ -215,18 +192,36 @@ export default function Dashboard() {
     }
   };
 
+  
+  const handleDeleteAccount = async () => {
+    if (
+      !confirm(
+        'Are you sure you want to permanently delete your account? This cannot be undone.'
+      )
+    )
+      return;
+
+    try {
+      await apiService.deleteUser(currentUser.userId);
+      authService.logout();
+    } catch (error: any) {
+      console.error(error);
+      alert(error.message || 'Failed to delete account');
+    }
+  };
+
   const handleBookUpdateSuccess = (updatedBook: Book) => {
-    setUserBooks(prev => prev.map(book =>
-      book._id === updatedBook._id ? updatedBook : book
-    ));
+    setUserBooks(prev =>
+      prev.map(book => (book._id === updatedBook._id ? updatedBook : book))
+    );
     setShowBookUpdateForm(false);
     setSelectedBook(null);
   };
 
   const handleLibraryUpdateSuccess = (updatedLibrary: Library) => {
-    setUserLibraries(prev => prev.map(lib =>
-      lib._id === updatedLibrary._id ? updatedLibrary : lib
-    ));
+    setUserLibraries(prev =>
+      prev.map(lib => (lib._id === updatedLibrary._id ? updatedLibrary : lib))
+    );
     setShowLibraryUpdateForm(false);
     setSelectedLibrary(null);
   };
@@ -236,40 +231,24 @@ export default function Dashboard() {
       const user = authService.getCurrentUser();
       if (user) {
         user.username = updatedUser.Username;
-
-        if (updatedUser.avatar) {
-          user.avatar = updatedUser.avatar;
-        }
-
+        if (updatedUser.avatar) user.avatar = updatedUser.avatar;
         localStorage.setItem('user', JSON.stringify(user));
       }
     }
-
     setShowUserUpdateForm(false);
-
     alert('User details updated successfully!');
     window.location.reload();
   };
 
   const handleCreateSuccess = (newItem: Book | Library) => {
     if ('category' in newItem && !('address' in newItem)) {
-
       const book = newItem as Book;
       setUserBooks(prev => [...prev, book]);
-
-      setUserStats(prev => ({
-        ...prev,
-        totalBooks: prev.totalBooks + 1,
-      }));
+      setUserStats(prev => ({ ...prev, totalBooks: prev.totalBooks + 1 }));
     } else {
-
       const library = newItem as Library;
       setUserLibraries(prev => [...prev, library]);
-
-      setUserStats(prev => ({
-        ...prev,
-        totalLibraries: prev.totalLibraries + 1
-      }));
+      setUserStats(prev => ({ ...prev, totalLibraries: prev.totalLibraries + 1 }));
     }
     setShowCreateForm(false);
     setCreateType('book');
@@ -284,40 +263,29 @@ export default function Dashboard() {
     setShowCreateForm(true);
   };
 
-  const getSafeBook = (book: Book): Book => {
-    return {
-      _id: book._id || '',
-      name: book.name || 'Unknown Book',
-      category: book.category || 'Uncategorized',
-      image: book.image,
-      library: book.library,
-      Created_By: book.Created_By
-    };
-  };
+  const getSafeBook = (book: Book): Book => ({
+    _id: book._id || '',
+    name: book.name || 'Unknown Book',
+    category: book.category || 'Uncategorized',
+    image: book.image,
+    library: book.library,
+    Created_By: book.Created_By,
+    author: book.author
+  });
 
-  const getSafeLibrary = (library: Library): Library => {
-    return {
-      _id: library._id || '',
-      name: library.name || 'Unknown Library',
-      address: library.address || 'No address provided',
-      category: library.category || 'General',
-      Created_By: library.Created_By
-    };
-  };
+  const getSafeLibrary = (library: Library): Library => ({
+    _id: library._id || '',
+    name: library.name || 'Unknown Library',
+    address: library.address || 'No address provided',
+    category: library.category || 'General',
+    Created_By: library.Created_By
+  });
 
-  function ChatwithAi() {
-    return (
-      < Chat />
-    )
-  }
-
-  const getSafeUser = (user: User): User => {
-    return {
-      _id: user._id || '',
-      Username: user.Username || '',
-      Password: user.Password || '',
-    };
-  };
+  const getSafeUser = (user: User): User => ({
+    _id: user._id || '',
+    Username: user.Username || '',
+    Password: user.Password || '',
+  });
 
   if (loading.books && loading.libraries) {
     return (
@@ -325,28 +293,28 @@ export default function Dashboard() {
         <div className="spinner"></div>
         <p>Loading your dashboard...</p>
         <style jsx>{`
-        .dashboard-loading {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          min-height: 100vh;
-          background: #0d1117;
-          color: #fff;
-        }
-        .spinner {
-          width: 50px;
-          height: 50px;
-          border: 3px solid rgba(255, 255, 255, 0.1);
-          border-radius: 50%;
-          border-top-color: #58a6ff;
-          animation: spin 1s ease-in-out infinite;
-          margin-bottom: 20px;
-        }
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
+          .dashboard-loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: #0d1117;
+            color: #fff;
+          }
+          .spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            border-top-color: #58a6ff;
+            animation: spin 1s ease-in-out infinite;
+            margin-bottom: 20px;
+          }
+          @keyframes spin {
+            to { transform: rotate(360deg); }
+          }
+        `}</style>
       </div>
     );
   }
@@ -356,17 +324,16 @@ export default function Dashboard() {
       <aside className="sidebar">
         <div className="sidebar-header">
           <div style={{ display: 'flex', height: '100%' }}>
-            <Link style={{textDecoration:'none'}} href={'/'}>
+            <Link style={{ textDecoration: 'none' }} href={'/'}>
               <div className="brand-header">
-                  <div className="logo-icon">
-                      <FiLayers />
-                  </div>
-                  <span className="brand-name">Libris</span>
+                <div className="logo-icon">
+                  <FiLayers />
+                </div>
+                <span className="brand-name">Libris</span>
               </div>
             </Link>
           </div>
         </div>
-        
 
         <nav className="sidebar-nav">
           <div className="nav-section">
@@ -406,25 +373,16 @@ export default function Dashboard() {
               <span>Add New Library</span>
             </button>
             <h4 className="section-title-profile">Update Profile</h4>
-            <button
-            className="nav-btn create-btn"
-            onClick={handleEditUser}
-          >
-            <span>Update details</span>
-          </button>
+            <button className="nav-btn create-btn" onClick={handleEditUser}>
+              <span>Update details</span>
+            </button>
           </div>
         </nav>
 
         <div className="sidebar-footer">
-          {/* <button className="logout-btn" onClick={handleLogout}>
-            <FiLogOut />
-            <span>Logout</span>
-          </button> */}
-
           <div className="user-info">
             <div className="user-avatar">
               <Link href={'/profile'}>
-
                 {currentUser?.avatar ? (
                   <img
                     src={`${API_URL}${currentUser.avatar}`}
@@ -440,7 +398,11 @@ export default function Dashboard() {
             </div>
             <div>
               <h3>{currentUser?.username || 'User'}</h3>
-              <p className="user-email">{ currentUser.userId.slice(0,5)+'.......'+currentUser.userId.slice(18,-1) }</p>
+              <p className="user-email">
+                {currentUser.userId
+                  ? currentUser.userId.slice(0, 5) + '.......' + currentUser.userId.slice(18, -1)
+                  : ''}
+              </p>
             </div>
           </div>
         </div>
@@ -462,20 +424,15 @@ export default function Dashboard() {
 
         <div className="stats-grid">
           <div className="stat-card primary">
-            <div className="stat-icon">
-              <FiBook />
-            </div>
+            <div className="stat-icon"><FiBook /></div>
             <div className="stat-content">
               <h3>Total Books</h3>
               <p className="stat-number">{userStats.totalBooks}</p>
               <p className="stat-desc">Books you've contributed</p>
             </div>
           </div>
-
           <div className="stat-card secondary">
-            <div className="stat-icon">
-              <FiBookOpen />
-            </div>
+            <div className="stat-icon"><FiBookOpen /></div>
             <div className="stat-content">
               <h3>Total Libraries</h3>
               <p className="stat-number">{userStats.totalLibraries}</p>
@@ -487,16 +444,13 @@ export default function Dashboard() {
         <section className="content-section">
           <div className="section-header">
             <div>
-              <h2>
-                {activeTab === 'books' ? 'Book Collection' : 'Library Collection'}
-              </h2>
+              <h2>{activeTab === 'books' ? 'Book Collection' : 'Library Collection'}</h2>
               <p>
                 {activeTab === 'books'
                   ? 'All books you have added to the system'
                   : 'All libraries you have created'}
               </p>
             </div>
-
             <button
               className="add-btn"
               onClick={() => handleOpenCreateForm(activeTab === 'books' ? 'book' : 'library')}
@@ -518,17 +472,14 @@ export default function Dashboard() {
                   <div className="empty-icon">📚</div>
                   <h3>No Books Yet</h3>
                   <p>Start by adding your first book to the collection</p>
-                  <button
-                    className="cta-btn"
-                    onClick={() => handleOpenCreateForm('book')}
-                  >
+                  <button className="cta-btn" onClick={() => handleOpenCreateForm('book')}>
                     <FiPlus />
                     Add Your First Book
                   </button>
                 </div>
               ) : (
                 <div className="books-grid">
-                  {userBooks.map((book) => {
+                  {userBooks.map(book => {
                     const safeBook = getSafeBook(book);
                     return (
                       <div key={safeBook._id} className="book-item">
@@ -569,17 +520,14 @@ export default function Dashboard() {
                   <div className="empty-icon">🏛️</div>
                   <h3>No Libraries Yet</h3>
                   <p>Create your first library to organize books</p>
-                  <button
-                    className="cta-btn"
-                    onClick={() => handleOpenCreateForm('library')}
-                  >
+                  <button className="cta-btn" onClick={() => handleOpenCreateForm('library')}>
                     <FiPlus />
                     Create Your First Library
                   </button>
                 </div>
               ) : (
                 <div className="libraries-grid">
-                  {userLibraries.map((library) => {
+                  {userLibraries.map(library => {
                     const safeLibrary = getSafeLibrary(library);
                     return (
                       <div key={safeLibrary._id} className="library-item">
@@ -626,12 +574,12 @@ export default function Dashboard() {
       )}
 
       {showUserUpdateForm && selectedUser && (
+        
         <UserUpdateForm
           user={getSafeUser(selectedUser)}
           onUpdate={handleUserUpdateSuccess}
-          onClose={() => {
-            setShowUserUpdateForm(false);
-          }}
+          onDelete={handleDeleteAccount}
+          onClose={() => setShowUserUpdateForm(false)}
         />
       )}
 
@@ -652,8 +600,6 @@ export default function Dashboard() {
           min-height: 100vh;
           background: #0d1117;
           color: #fff;
-          align-item:center;
-          justify-content:center
         }
 
         .sidebar {
@@ -677,45 +623,35 @@ export default function Dashboard() {
           display: flex;
           align-items: center;
           gap: 15px;
-          margin-top:5px;
-          width:100%;
-          justify-content:flex-start
+          margin-top: 5px;
+          width: 100%;
+          justify-content: flex-start;
         }
+
         .sidebar-nav {
           flex: 1;
           padding: 24px 0;
           overflow-y: auto;
-          
-          /* Add these lines to style the scrollbar */
-          scrollbar-width: thin; /* Firefox */
-          scrollbar-color: rgba(255, 255, 255, 0.1) transparent; /* Firefox */
+          scrollbar-width: thin;
+          scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
         }
 
-        /* Webkit browsers (Chrome, Safari, Edge) */
-        .sidebar-nav::-webkit-scrollbar {
-          width: 6px;
-        }
-
-        .sidebar-nav::-webkit-scrollbar-track {
-          background: transparent;
-        }
-
+        .sidebar-nav::-webkit-scrollbar { width: 6px; }
+        .sidebar-nav::-webkit-scrollbar-track { background: transparent; }
         .sidebar-nav::-webkit-scrollbar-thumb {
           background-color: rgba(255, 255, 255, 0.1);
           border-radius: 3px;
         }
-
         .sidebar-nav::-webkit-scrollbar-thumb:hover {
           background-color: rgba(255, 255, 255, 0.2);
         }
+
         .user-avatar {
-          // width: 40px;
           height: 40px;
           border-radius: 50%;
           display: flex;
           align-items: flex-start;
           justify-content: flex-start;
-          // width:100%
         }
 
         .user-info h3 {
@@ -728,12 +664,6 @@ export default function Dashboard() {
           margin: 4px 0 0;
           color: #8b949e;
           font-size: 0.85rem;
-        }
-
-        .sidebar-nav {
-          flex: 1;
-          padding: 24px 0;
-          overflow-y: auto;
         }
 
         .nav-section {
@@ -749,6 +679,7 @@ export default function Dashboard() {
           margin: 0 0 16px;
           font-weight: 600;
         }
+
         .section-title-profile {
           color: #8b949e;
           font-size: 0.8rem;
@@ -757,34 +688,34 @@ export default function Dashboard() {
           margin: 20px 0 10px;
           font-weight: 600;
         }
+
         .brand-header {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            justify-content:flex-start;
-            width:100%;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          justify-content: flex-start;
+          width: 100%;
         }
-        
+
         .brand-name {
-            font-size: 1.7rem;
-            font-weight: 700;
-            color: #fff;
-            letter-spacing: 2px;
-            margin-bottom:10px
+          font-size: 1.7rem;
+          font-weight: 700;
+          color: #fff;
+          letter-spacing: 2px;
+          margin-bottom: 10px;
         }
 
         .logo-icon {
-            width: 32px;
-            height: 32px;
-            background: linear-gradient(135deg, #58a6ff, #238636);
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            margin-bottom:10px
+          width: 32px;
+          height: 32px;
+          background: linear-gradient(135deg, #58a6ff, #238636);
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: white;
+          margin-bottom: 10px;
         }
-
 
         .nav-btn {
           display: flex;
@@ -839,31 +770,11 @@ export default function Dashboard() {
         .sidebar-footer {
           padding: 24px;
           border-top: 1px solid rgba(255, 255, 255, 0.1);
-          display:flex;
-          align-item:center;
-          justify-content:center;
-          flex-direction:column;
-          gap:10px
-        }
-
-        .logout-btn {
           display: flex;
           align-items: center;
-          gap: 12px;
-          width: 100%;
-          padding: 12px;
-          background: rgba(248, 81, 73, 0.1);
-          border: 1px solid rgba(248, 81, 73, 0.2);
-          border-radius: 8px;
-          color: #ff7b72;
-          font-size: 0.95rem;
-          font-weight: 500;
-          cursor: pointer;
-          transition: all 0.2s;
-        }
-
-        .logout-btn:hover {
-          background: rgba(248, 81, 73, 0.2);
+          justify-content: center;
+          flex-direction: column;
+          gap: 10px;
         }
 
         .main-content {
@@ -919,13 +830,8 @@ export default function Dashboard() {
           border-color: rgba(88, 166, 255, 0.3);
         }
 
-        .stat-card.primary {
-          border-left: 4px solid #58a6ff;
-        }
-
-        .stat-card.secondary {
-          border-left: 4px solid #2ea043;
-        }
+        .stat-card.primary { border-left: 4px solid #58a6ff; }
+        .stat-card.secondary { border-left: 4px solid #2ea043; }
 
         .stat-icon {
           width: 56px;
@@ -938,19 +844,10 @@ export default function Dashboard() {
           font-size: 1.5rem;
         }
 
-        .stat-card.primary .stat-icon {
-          background: rgba(88, 166, 255, 0.2);
-          color: #58a6ff;
-        }
+        .stat-card.primary .stat-icon { background: rgba(88, 166, 255, 0.2); color: #58a6ff; }
+        .stat-card.secondary .stat-icon { background: rgba(46, 160, 67, 0.2); color: #2ea043; }
 
-        .stat-card.secondary .stat-icon {
-          background: rgba(46, 160, 67, 0.2);
-          color: #2ea043;
-        }
-
-        .stat-content {
-          flex: 1;
-        }
+        .stat-content { flex: 1; }
 
         .stat-content h3 {
           margin: 0 0 8px;
@@ -968,11 +865,7 @@ export default function Dashboard() {
           color: #fff;
         }
 
-        .stat-desc {
-          margin: 0;
-          color: #8b949e;
-          font-size: 0.9rem;
-        }
+        .stat-desc { margin: 0; color: #8b949e; font-size: 0.9rem; }
 
         .content-section {
           background: rgba(255, 255, 255, 0.02);
@@ -995,11 +888,7 @@ export default function Dashboard() {
           color: #fff;
         }
 
-        .section-header p {
-          margin: 0;
-          color: #8b949e;
-          font-size: 0.95rem;
-        }
+        .section-header p { margin: 0; color: #8b949e; font-size: 0.95rem; }
 
         .add-btn {
           display: flex;
@@ -1021,9 +910,7 @@ export default function Dashboard() {
           transform: translateY(-2px);
         }
 
-        .content-grid {
-          min-height: 300px;
-        }
+        .content-grid { min-height: 300px; }
 
         .loading-content {
           display: flex;
@@ -1033,27 +920,11 @@ export default function Dashboard() {
           padding: 60px 20px;
         }
 
-        .loading-content p {
-          margin-top: 16px;
-          color: #8b949e;
-        }
+        .loading-content p { margin-top: 16px; color: #8b949e; }
 
-        .empty-state {
-          text-align: center;
-          padding: 60px 20px;
-        }
-
-        .empty-icon {
-          font-size: 3rem;
-          margin-bottom: 20px;
-        }
-
-        .empty-state h3 {
-          margin: 0 0 12px;
-          font-size: 1.5rem;
-          color: #fff;
-        }
-
+        .empty-state { text-align: center; padding: 60px 20px; }
+        .empty-icon { font-size: 3rem; margin-bottom: 20px; }
+        .empty-state h3 { margin: 0 0 12px; font-size: 1.5rem; color: #fff; }
         .empty-state p {
           margin: 0 0 24px;
           color: #8b949e;
@@ -1089,9 +960,7 @@ export default function Dashboard() {
           gap: 24px;
         }
 
-        .book-item {
-          position: relative;
-        }
+        .book-item { position: relative; }
 
         .item-actions {
           position: absolute;
@@ -1115,25 +984,10 @@ export default function Dashboard() {
           font-size: 0.9rem;
         }
 
-        .action-btn.edit {
-          background: rgba(88, 166, 255, 0.2);
-          color: #58a6ff;
-        }
-
-        .action-btn.edit:hover {
-          background: rgba(88, 166, 255, 0.3);
-          transform: scale(1.1);
-        }
-
-        .action-btn.delete {
-          background: rgba(248, 81, 73, 0.2);
-          color: #ff7b72;
-        }
-
-        .action-btn.delete:hover {
-          background: rgba(248, 81, 73, 0.3);
-          transform: scale(1.1);
-        }
+        .action-btn.edit { background: rgba(88, 166, 255, 0.2); color: #58a6ff; }
+        .action-btn.edit:hover { background: rgba(88, 166, 255, 0.3); transform: scale(1.1); }
+        .action-btn.delete { background: rgba(248, 81, 73, 0.2); color: #ff7b72; }
+        .action-btn.delete:hover { background: rgba(248, 81, 73, 0.3); transform: scale(1.1); }
 
         .libraries-grid {
           display: grid;
@@ -1141,71 +995,36 @@ export default function Dashboard() {
           gap: 24px;
         }
 
-        .library-item {
-          transition: transform 0.2s;
+        .library-item { transition: transform 0.2s; }
+        .library-item:hover { transform: translateY(-4px); }
+
+        .spinner {
+          width: 50px;
+          height: 50px;
+          border: 3px solid rgba(255, 255, 255, 0.1);
+          border-radius: 50%;
+          border-top-color: #58a6ff;
+          animation: spin 1s ease-in-out infinite;
         }
 
-        .library-item:hover {
-          transform: translateY(-4px);
-        }
+        .spinner.small { width: 30px; height: 30px; }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
 
         @media (max-width: 1024px) {
-          .dashboard-container {
-            flex-direction: column;
-          }
-
-          .sidebar {
-            width: 100%;
-            height: auto;
-            position: relative;
-            padding: 16px;
-          }
-
-          .sidebar-nav {
-            padding: 16px 0;
-          }
-
-          .stats-grid {
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-          }
+          .dashboard-container { flex-direction: column; }
+          .sidebar { width: 100%; height: auto; position: relative; padding: 16px; }
+          .sidebar-nav { padding: 16px 0; }
+          .stats-grid { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
         }
 
         @media (max-width: 768px) {
-          .main-content {
-            padding: 20px;
-          }
-
-          .main-header {
-            flex-direction: column;
-            gap: 16px;
-            align-items: stretch;
-          }
-
-          .section-header {
-            flex-direction: column;
-            gap: 16px;
-            align-items: stretch;
-            text-align: center;
-          }
-
-          .add-btn {
-            justify-content: center;
-          }
-
-          .books-grid,
-          .libraries-grid {
-            grid-template-columns: 1fr;
-          }
-
-          .stats-grid {
-            grid-template-columns: 1fr;
-          }
-          .chat-with-ai {
-            position: absolute;
-            bottom: 0;
-            z-index: 1;
-            right: 0;
-          }
+          .main-content { padding: 20px; }
+          .main-header { flex-direction: column; gap: 16px; align-items: stretch; }
+          .section-header { flex-direction: column; gap: 16px; align-items: stretch; text-align: center; }
+          .add-btn { justify-content: center; }
+          .books-grid, .libraries-grid { grid-template-columns: 1fr; }
+          .stats-grid { grid-template-columns: 1fr; }
         }
       `}</style>
     </div>

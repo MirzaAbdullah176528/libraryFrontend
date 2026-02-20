@@ -8,6 +8,7 @@ interface Prompt {
   topic: string;
   name: string;
   category: string;
+  author: string
 }
 
 interface Response {
@@ -38,7 +39,6 @@ interface ApiData {
 }
 
 const Loading = () => {
-
   return (
     <div className="dashboard-loading">
       <div className="spinner"></div>
@@ -73,14 +73,16 @@ export default function Chat() {
     topic: '',
     name: '',
     category: '',
+    author: ''
   });
 
   const [user, setUser] = useState<any>(null);
   const [userLibraries, setUserLibraries] = useState<Library[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const resultsEndRef = useRef<HTMLDivElement>(null);
-  const [loading, setLoading] = useState(false)
-  const [uplaodEnable, setUplaodEnable] = useState(false)
+  const [sendLoading, setSendLoading] = useState(false);
+  const [uploadingIndices, setUploadingIndices] = useState<Set<number>>(new Set());
+  const [uploadedIndices, setUploadedIndices] = useState<Set<number>>(new Set());
   let parsedData: any;
 
   useEffect(() => {
@@ -131,8 +133,10 @@ export default function Chat() {
     e.preventDefault();
 
     try {
+      setSendLoading(true);
       const res = await apiService.getRes(formData);
-
+      // console.log(res);
+      
       if (res && res.data) {
         const lastLibrary = userLibraries.length > 0
           ? userLibraries[userLibraries.length - 1]
@@ -144,7 +148,7 @@ export default function Chat() {
           try {
             const listData = chunk.split('\n');
             if (listData.length >= 6) {
-              const jsonString = `${listData[1]} ${listData[2]} ${listData[3]} "library": "${lastLibrary._id}"}`;
+              const jsonString = `${listData[1]} ${listData[2]} ${listData[3]} ${listData[4]} "library": "${lastLibrary._id}"}`;
 
               parsedData = JSON.parse(jsonString);
               console.log(parsedData);
@@ -154,22 +158,33 @@ export default function Chat() {
           } catch (parseError) {
             console.error("Error parsing chunk", parseError);
           }
-          setLoading(false)
         });
       }
     } catch (error) {
       console.error("API Error:", error);
+    } finally {
+      setSendLoading(false);
     }
   };
 
-  const uploadSugestion = async (data: ApiData) => {
-    setLoading(true)
-    const uploadedBook = await apiService.createBook(data)
-    if (uploadedBook) {
-      setLoading(false)
+  const uploadSugestion = async (data: ApiData, index: number) => {
+    setUploadingIndices(prev => new Set(prev).add(index));
+    try {
+      const uploadedBook = await apiService.createBook(data);
+      if (uploadedBook) {
+        setUploadedIndices(prev => new Set(prev).add(index));
+      }
+      console.log(uploadedBook);
+    } catch (error) {
+      console.error("Upload error:", error);
+    } finally {
+      setUploadingIndices(prev => {
+        const next = new Set(prev);
+        next.delete(index);
+        return next;
+      });
     }
-    console.log(uploadedBook)
-  }
+  };
 
   return (
     <>
@@ -190,21 +205,25 @@ export default function Chat() {
                 </div>
               )}
 
-              {messages.map((msg, index) => (
-                <div key={index} className="message-card">
-                  <div className="message-title">{msg.name || "Result"}</div>
-                  <div className="message-desc">{msg.category || "No details provided"}</div>
-                  <div>{msg.library}</div>
-                  <div> {msg.discirption} </div>
-                  <button
-                    className="cta-btn"
-                    onClick={() => { uploadSugestion(msg); setUplaodEnable(true) }}
-                    disabled={uplaodEnable}
-                  >
-                    {loading ? <Loading /> : 'Upload'}
-                  </button>
-                </div>
-              ))}
+              {messages.map((msg, index) => {
+                const isUploading = uploadingIndices.has(index);
+                const isUploaded = uploadedIndices.has(index);
+
+                return (
+                  <div key={index} className="message-card">
+                    <div className="message-title">{msg.name || "Result"}</div>
+                    <div className="message-desc">{msg.category || "No details provided"}</div>
+                    <div className="message-desc">{ msg.author || "no" }</div>
+                    <button
+                      className={`cta-btn ${isUploaded ? 'uploaded' : ''}`}
+                      onClick={() => uploadSugestion(msg, index)}
+                      disabled={isUploading || isUploaded}
+                    >
+                      {isUploading ? <Loading /> : isUploaded ? '✓ Uploaded' : 'Upload'}
+                    </button>
+                  </div>
+                );
+              })}
               <div ref={resultsEndRef} />
             </div>
 
@@ -225,7 +244,13 @@ export default function Chat() {
                   onChange={handleChange}
                 />
               </div>
-
+              <input
+                  className="chat-input medium"
+                  placeholder="Author"
+                  value={formData.author}
+                  name="author"
+                  onChange={handleChange}
+                />
               <textarea
                 className="chat-input full"
                 name="topic"
@@ -236,8 +261,12 @@ export default function Chat() {
                 rows={2}
               />
 
-              <button onClick={() => setLoading(true)} type="submit" className="submit-btn">
-                {loading ? <Loading /> : 'send'}
+              <button
+                type="submit"
+                className="submit-btn"
+                disabled={sendLoading || !formData.topic.trim()}
+              >
+                {sendLoading ? <Loading /> : 'Send'}
               </button>
             </form>
           </div>
@@ -250,7 +279,7 @@ export default function Chat() {
           bottom: 20px;
           right: 20px;
           width: 350px;
-          background: #ffffff;
+          background: #0d1117;
           border-radius: 12px;
           box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
           font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -269,7 +298,7 @@ export default function Chat() {
         }
 
         .chat-header {
-          background: #2563eb;
+          background: #161b22;
           color: white;
           padding: 15px 20px;
           display: flex;
@@ -284,7 +313,7 @@ export default function Chat() {
           align-items: center;
           gap: 8px;
           padding: 14px 28px;
-          background: linear-gradient(90deg, #58a6ff, #1f6feb);
+          background: linear-gradient(135deg, #58a6ff, #238636);
           border: none;
           border-radius: 12px;
           color: #fff;
@@ -295,10 +324,21 @@ export default function Chat() {
           transition: all 0.2s;
         }
 
-        .cta-btn:hover {
+        .cta-btn:hover:not(:disabled) {
           filter: brightness(1.1);
           transform: translateY(-2px);
         }
+
+        .cta-btn:disabled {
+          cursor: not-allowed;
+          opacity: 0.8;
+        }
+
+        .cta-btn.uploaded {
+          background: linear-gradient(90deg, #22c55e, #16a34a);
+          opacity: 1;
+        }
+
         .chat-widget:not(.open) .chat-header {
           padding: 0;
           width: 100%;
@@ -341,7 +381,7 @@ export default function Chat() {
           flex: 1;
           padding: 15px;
           overflow-y: auto;
-          background: #f8fafc;
+          background: #0d1117;
         }
 
         .empty-state {
@@ -352,17 +392,21 @@ export default function Chat() {
         }
 
         .message-card {
-          background: white;
-          border: 1px solid #e2e8f0;
+          background: #161b22;
           padding: 12px;
           border-radius: 8px;
           margin-bottom: 10px;
           box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+          display:flex;
+          align-item:center;
+          justify-content:center;
+          flex-direction:column;
+          gap:5px
         }
 
         .message-title {
           font-weight: 600;
-          color: #1e293b;
+          color: #d3d3d3;
           font-size: 14px;
           margin-bottom: 4px;
         }
@@ -374,8 +418,8 @@ export default function Chat() {
 
         .chat-form {
           padding: 15px;
-          border-top: 1px solid #e2e8f0;
-          background: white;
+          border-top: 1px solid #2563eb;
+          background: #0d1117;
         }
 
         .input-row {
@@ -386,7 +430,7 @@ export default function Chat() {
 
         .chat-input {
           padding: 10px;
-          border: 1px solid #cbd5e1;
+          border: 1px solid #2563eb;
           border-radius: 6px;
           font-size: 13px;
           outline: none;
@@ -399,28 +443,65 @@ export default function Chat() {
 
         .half {
           width: 50%;
+          color: #a0a0a0;
+          background-color: #0d1117;
         }
 
         .full {
           width: 100%;
           resize: none;
           margin-bottom: 10px;
+          color: #a0a0a0;
+          background-color: #0d1117;
+        }
+
+        .chat-widget {
+          flex: 1;
+          padding: 24px 0;
+          overflow-y: auto;
+          scrollbar-width: thin;
+          scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+        }
+
+        .chat-widget::-webkit-scrollbar { width: 6px; }
+        .chat-widget::-webkit-scrollbar-track { background: transparent; }
+        .chat-widget::-webkit-scrollbar-thumb {
+          background-color: rgba(255, 255, 255, 0.1);
+          border-radius: 3px;
+        }
+        .chat-widget::-webkit-scrollbar-thumb:hover {
+          background-color: rgba(255, 255, 255, 0.2);
+        }
+        
+        .medium {
+          width: 100%;
+          resize: none;
+          margin-bottom: 10px;
+          color: #a0a0a0;
+          background-color: #0d1117;
         }
 
         .submit-btn {
           width: 100%;
-          background: #2563eb;
+          background: linear-gradient(135deg, #58a6ff, #238636);
           color: white;
+          text-shadow: 1px 1px 1px #58a6ff;
           border: none;
           padding: 10px;
           border-radius: 6px;
           font-weight: 500;
           cursor: pointer;
           transition: background 0.2s;
+          font-size: 1rem
         }
 
-        .submit-btn:hover {
-          background: #1d4ed8;
+        .submit-btn:hover:not(:disabled) {
+          background: linear-gradient(135deg, #58a6ff, #238636);
+        }
+
+        .submit-btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
         }
       `}</style>
     </>

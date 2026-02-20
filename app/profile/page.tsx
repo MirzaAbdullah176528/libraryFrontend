@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiService } from '../../service/api';
 import { authService } from '../../service/auth';
-import { FiUser, FiHash, FiLock, FiLogOut, FiCamera } from 'react-icons/fi';
+import { FiUser, FiHash, FiLogOut, FiTrash2 } from 'react-icons/fi';
 
 interface UserProfile {
   _id: string;
@@ -12,68 +12,85 @@ interface UserProfile {
   avatar: string;
 }
 
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
 export default function Profile() {
   const router = useRouter();
   const [user, setUser] = useState<UserProfile>();
   const [loading, setLoading] = useState(true);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   async function getUser() {
-    let user = await authService.getCurrentUser();
+    let currentUser = await authService.getCurrentUser();
 
-    if (user) {
-      const userMetaData = {
-        userId: user.userId || user._id || user.id,
-        username: user.username || user.Username
-      };
-      let userData = await apiService.getProfile(userMetaData.userId)
-      if (userData) {
-        const normalizedUser = {
-          _id: userData._id,
-          Username: userData.Username,
-          avatar: userData.avatar
+    if (currentUser) {
+      const userId = currentUser.userId || currentUser._id || currentUser.id;
+      try {
+        let userData = await apiService.getProfile(userId)
+        if (userData) {
+          const normalizedUser = {
+            _id: userData._id,
+            Username: userData.Username,
+            avatar: userData.avatar
+          }
+          setUser(normalizedUser);
         }
-
-        setUser(normalizedUser);
+      } catch (e) {
+        console.error("Failed to fetch profile", e);
       }
     }
+    setLoading(false);
   }
 
   useEffect(() => {
-
     const token = localStorage.getItem('token');
-
     if (!token) {
       router.push('/login');
       return;
     }
-
-    const initProfile = async () => {
-      try {
-        const localUser = authService.getCurrentUser();
-
-        const userId = localUser?.userId || localUser?._id || localUser?.id;
-
-
-        if (!userId) {
-          return;
-        }
-      } catch (error) {
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    initProfile();
+    getUser();
   }, [router]);
-
-  useEffect(() => {
-    getUser()
-    console.log(user)
-  }, []);
 
   const handleLogout = () => {
     authService.logout();
     router.push('/login');
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!user?._id) return;
+
+    const confirmed = window.confirm(
+      "Are you sure you want to delete your account? This action cannot be undone."
+    );
+
+    if (!confirmed) return;
+
+    setDeleteLoading(true);
+
+    try {
+      const token = localStorage.getItem('token');
+      
+      const response = await fetch(`${BASE_URL}/auth/delete/${user._id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        authService.logout();
+        router.push('/login');
+      } else {
+        const data = await response.json();
+        alert(data.message || data.error || "Failed to delete account");
+      }
+    } catch (error) {
+      console.error("Error deleting account:", error);
+      alert("An error occurred while trying to delete the account.");
+    } finally {
+      setDeleteLoading(false);
+    }
   };
 
   if (loading) {
@@ -108,6 +125,17 @@ export default function Profile() {
     <div className="profile-page">
       <div className="glass-panel side-form">
         <div className="avatar-section">
+            <div className="avatar-wrapper">
+             {user?.avatar ? (
+                <img 
+                    src={`${BASE_URL}${user.avatar}`} 
+                    alt="Profile" 
+                    onError={(e) => { e.currentTarget.src = "https://via.placeholder.com/150/0d1117/58a6ff?text=User"}} 
+                />
+             ) : (
+                <div className="avatar-placeholder"><FiUser /></div>
+             )}
+            </div>
           <h2 className="user-greeting">Welcome, {user?.Username || 'User'}</h2>
         </div>
 
@@ -129,9 +157,20 @@ export default function Profile() {
           </div>
         </div>
 
-        <button onClick={handleLogout} className="logout-btn">
-          <FiLogOut /> <span>Sign Out</span>
-        </button>
+        <div className="actions-section">
+            <button onClick={handleLogout} className="action-btn logout-btn">
+                <FiLogOut /> <span>Sign Out</span>
+            </button>
+
+            <button 
+                onClick={handleDeleteAccount} 
+                className="action-btn delete-btn"
+                disabled={deleteLoading}
+            >
+                {deleteLoading ? <span className="spinner-sm"></span> : <FiTrash2 />} 
+                <span>{deleteLoading ? 'Deleting...' : 'Delete Account'}</span>
+            </button>
+        </div>
       </div>
       <style jsx>{`
         .profile-page {
@@ -157,15 +196,11 @@ export default function Profile() {
         .avatar-wrapper {
           position: relative; width: 100px; height: 100px; border-radius: 50%;
           background: #0d1117; border: 2px solid #58a6ff; display: flex;
-          align-items: center; justify-content: center;
+          align-items: center; justify-content: center; overflow: hidden;
         }
-        .avatar-wrapper img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
-        .avatar-placeholder { font-size: 40px; color: #58a6ff; }
-        .edit-avatar-btn {
-          position: absolute; bottom: 0; right: 0; background: #238636;
-          border: none; color: white; width: 32px; height: 32px; border-radius: 50%;
-          display: flex; align-items: center; justify-content: center; cursor: pointer;
-        }
+        .avatar-wrapper img { width: 100%; height: 100%; object-fit: cover; }
+        .avatar-placeholder { font-size: 40px; color: #58a6ff; display: flex; align-items: center; justify-content: center; }
+        
         .user-greeting { color: #e6edf3; font-size: 20px; font-weight: 600; margin: 0; }
         .form-content { display: flex; flex-direction: column; gap: 20px; }
         .input-group { display: flex; flex-direction: column; gap: 8px; }
@@ -178,11 +213,45 @@ export default function Profile() {
           padding: 12px 16px 12px 42px; color: #c9d1d9; font-size: 14px; outline: none;
         }
         .mono { font-family: monospace; color: #79c0ff; }
-        .logout-btn {
-          margin-top: auto; background: rgba(248, 81, 73, 0.1); color: #f85149;
-          border: 1px solid rgba(248, 81, 73, 0.4); padding: 12px; border-radius: 12px;
+        
+        .actions-section {
+            margin-top: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .action-btn {
+          padding: 12px; border-radius: 12px;
           font-weight: 600; cursor: pointer; display: flex; align-items: center;
-          justify-content: center; gap: 8px;
+          justify-content: center; gap: 8px; border: 1px solid transparent;
+          transition: all 0.2s;
+        }
+
+        .logout-btn {
+          background: rgba(88, 166, 255, 0.1); color: #58a6ff;
+          border-color: rgba(88, 166, 255, 0.2);
+        }
+        .logout-btn:hover {
+            background: rgba(88, 166, 255, 0.2);
+        }
+
+        .delete-btn {
+          background: rgba(248, 81, 73, 0.1); color: #f85149;
+          border-color: rgba(248, 81, 73, 0.2);
+        }
+        .delete-btn:hover:not(:disabled) {
+           background: rgba(248, 81, 73, 0.2);
+           transform: translateY(-1px);
+        }
+        .delete-btn:disabled {
+            opacity: 0.7; cursor: not-allowed;
+        }
+
+        .spinner-sm {
+            width: 16px; height: 16px; border: 2px solid currentColor;
+            border-top-color: transparent; border-radius: 50%;
+            animation: spin 1s linear infinite;
         }
       `}</style>
     </div>

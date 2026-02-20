@@ -9,6 +9,7 @@ interface Book {
   name: string;
   category: string;
   image?: string;
+  author?: string;
   library?: { name: string; _id: string };
   Created_By?: { username: string };
 }
@@ -23,6 +24,7 @@ const BookUpdateForm = ({ book, onUpdate, onClose }: BookUpdateFormProps) => {
   const [formData, setFormData] = useState({
     name: book.name,
     category: book.category,
+    author: book.author
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -87,6 +89,19 @@ const BookUpdateForm = ({ book, onUpdate, onClose }: BookUpdateFormProps) => {
               onChange={handleChange}
               required
               placeholder="e.g., Fiction, Science, History"
+            />
+          </div>
+          
+          <div className="form-group">
+            <label htmlFor="author">Author *</label>
+            <input
+              type="text"
+              id="author"
+              name="author"
+              value={formData.author}
+              onChange={handleChange}
+              required
+              placeholder="Gorge Orwell , Franz Kafka"
             />
           </div>
 

@@ -15,6 +15,7 @@ const BookCreateForm = ({ onSuccess, onClose, category }: BookCreateFormProps) =
     name: '',
     category: '',
     library: '',
+    author: ''
   });
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -95,6 +96,7 @@ const BookCreateForm = ({ onSuccess, onClose, category }: BookCreateFormProps) =
         formDataPayload.append('name', formData.name);
         formDataPayload.append('category', formData.category);
         formDataPayload.append('library', formData.library);
+        formDataPayload.append('author', formData.author)
 
         if (selectedFile) {
           formDataPayload.append('image', selectedFile);
@@ -154,17 +156,33 @@ const BookCreateForm = ({ onSuccess, onClose, category }: BookCreateFormProps) =
                 />
               </div>
 
-              <div className="form-group">
-                <label htmlFor="category">Category *</label>
-                <input
-                  type="text"
-                  id="category"
-                  name="category"
-                  value={formData.category}
-                  onChange={handleChange}
-                  required
-                  placeholder="e.g., Fiction, Science, History"
-                />
+              <div className="form-group-auth-cat">
+                <div>
+                  <label htmlFor="category">Category *</label>
+                  <input
+                    type="text"
+                    id="category"
+                    name="category"
+                    value={formData.category}
+                    onChange={handleChange}
+                    required
+                    placeholder="e.g., Fiction, Science, History"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="author">Author *</label>
+                  <input
+                    type="text"
+                    id="author"
+                    name="author"
+                    value={formData.author}
+                    onChange={handleChange}
+                    required
+                    placeholder="e.g., Gorge Orwell , Franz Kafka"
+                  />
+                </div>
+
               </div>
 
               <div className="form-group">
@@ -176,7 +194,7 @@ const BookCreateForm = ({ onSuccess, onClose, category }: BookCreateFormProps) =
                   onChange={handleChange}
                   required
                 >
-                  <option value="">Select a library</option>
+                <option value="">Select a library</option>
                   {libraries.map((library) => (
                     <option key={library._id} value={library._id}>
                       {library.name} - {library.address}
@@ -350,7 +368,47 @@ const BookCreateForm = ({ onSuccess, onClose, category }: BookCreateFormProps) =
           background: #161b22;
           color: white;
         }
-        
+
+        .form-group-auth-cat {
+          margin-bottom: 20px;
+          display:flex;
+          align-item:center;
+          justify-content:space-between;
+        }
+
+        .form-group-auth-cat label {
+          display: block;
+          color: #8b949e;
+          font-size: 0.85rem;
+          margin-bottom: 8px;
+          font-weight: 500;
+        }
+
+        .form-group-auth-cat input[type="text"],
+        .form-group-auth-cat select {
+          width: 100%;
+          background: #0d1117;
+          border: 1px solid #30363d;
+          border-radius: 12px;
+          padding: 14px 16px;
+          color: white;
+          font-size: 0.95rem;
+          transition: all 0.2s;
+        }
+
+        .form-group-auth-cat input:focus,
+        .form-group-auth-cat select:focus {
+          outline: none;
+          border-color: #58a6ff;
+          box-shadow: 0 0 0 4px rgba(88, 166, 255, 0.1);
+          background: #161b22;
+        }
+
+        .form-group-auth-cat select option {
+          background: #161b22;
+          color: white;
+        }
+
         .file-input-wrapper {
           position: relative;
           width: 100%;

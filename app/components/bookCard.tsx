@@ -13,6 +13,7 @@ interface BookProps {
   library?: {
     name: string;
   };
+  author?: string;
 }
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
@@ -40,19 +41,25 @@ const BookCard = ({ book }: { book: BookProps }) => {
             e.currentTarget.src = "/reading books is a key of success.webp";
           }}
         />
-        <span className="book-category">{book.category}</span>
+        <span className="book-category">{ book.category.slice(0,15)+'....' }</span>
       </div>
       
       <div className="book-details">
-        <h3 className="book-title">{book.name}</h3>
+        <h3 className="book-title">{book.name.slice(0,25)+'....'}</h3>
         
         <div className="book-meta">
           <div className="meta-item">
-            <User size={14} />
-            <span>{book.Created_By?.username || 'System'}</span>
+            <div style={{display:'flex' , alignItems:'center' , justifyContent:'center'}}>
+              <User size={14} />
+              <span>{"By " + book.Created_By?.username || 'User'}</span>
+            </div>
+            <span>{book.author || 'No spacified'}</span>
           </div>
           <div className="meta-item">
-            <MapPin size={14} />
+            <div style={{display:'flex' , alignItems:'center' , justifyContent:'center'}}>
+              <MapPin size={14} />
+              <span>Location</span>
+            </div>
             <span>{book.library?.name || 'Unknown'}</span>
           </div>
         </div>
@@ -90,7 +97,7 @@ const BookCard = ({ book }: { book: BookProps }) => {
         .book-details { padding: 24px; }
         .book-title { margin: 0 0 16px 0; color: #fff; font-size: 1.1rem; }
         .book-meta { display: flex; flex-direction: column; gap: 8px; border-top: 1px solid #30363d; padding-top: 16px; }
-        .meta-item { display: flex; align-items: center; gap: 8px; color: #8b949e; font-size: 0.85rem; }
+        .meta-item { display: flex; align-items: center; gap: 8px; color: #8b949e; font-size: 0.85rem; justify-content:space-between}
       `}</style>
     </div>
   );
