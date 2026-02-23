@@ -50,10 +50,6 @@ const request = async (endpoint: string, options: RequestOptions = {}) => {
 export const authService = {
   login: (credentials: any) => request('/auth/login', { method: 'POST', body: credentials }),
 
-  // FIX: signup now sends FormData so multer can parse it correctly.
-  // Previously sent JSON, but the backend signup route uses multer middleware
-  // which prevents express.json() from populating req.body — causing Username
-  // and password to arrive as undefined, storing a hash of undefined.
   signup: (userData: { Username: string; password: string; image?: File }) => {
     const formData = new FormData();
     formData.append('Username', userData.Username);

@@ -15,7 +15,8 @@ const BookCreateForm = ({ onSuccess, onClose, category }: BookCreateFormProps) =
     name: '',
     category: '',
     library: '',
-    author: ''
+    author: '',
+    link:''
   });
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -96,7 +97,8 @@ const BookCreateForm = ({ onSuccess, onClose, category }: BookCreateFormProps) =
         formDataPayload.append('name', formData.name);
         formDataPayload.append('category', formData.category);
         formDataPayload.append('library', formData.library);
-        formDataPayload.append('author', formData.author)
+        formDataPayload.append('author', formData.author);
+        formDataPayload.append('pdf', formData.link)
 
         if (selectedFile) {
           formDataPayload.append('image', selectedFile);
@@ -143,6 +145,7 @@ const BookCreateForm = ({ onSuccess, onClose, category }: BookCreateFormProps) =
 
           {category === 'book' ? (
             <>
+            <div className='form-group-auth-cat'>
               <div className="form-group">
                 <label htmlFor="name">Book Title *</label>
                 <input
@@ -155,6 +158,19 @@ const BookCreateForm = ({ onSuccess, onClose, category }: BookCreateFormProps) =
                   placeholder="Enter book title"
                 />
               </div>
+              <div className="form-group">
+                <label htmlFor="link">Book Link *</label>
+                <input
+                  type="text"
+                  id="link"
+                  name="link"
+                  value={formData.link}
+                  onChange={handleChange}
+                  required
+                  placeholder="https://research-paper/"
+                />
+              </div>
+            </div>
 
               <div className="form-group-auth-cat">
                 <div>

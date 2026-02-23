@@ -1,12 +1,24 @@
 'use client'
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { FiUser, FiEye, FiEyeOff, FiLock, FiArrowRight, FiLayers } from 'react-icons/fi';
 import { authService } from '../../service/api';
+import {
+    Box,
+    Stack,
+    Typography,
+    TextField,
+    Button,
+    IconButton,
+    Alert,
+    InputAdornment,
+} from '@mui/material';
 
-type props = {
+import AOS from 'aos';
+import 'aos/dist/aos.css';
+
+type Props = {
     headerText?: string;
     apiUrl?: string;
     btnTextLoading?: string;
@@ -14,11 +26,11 @@ type props = {
 }
 
 const LoginPage = ({
-    headerText = 'Welcome Back to libris',
+    headerText = 'Login',
     apiUrl = '/login',
     btnTextLoading = 'Processing...',
     btnText = 'Log In'
-}: props) => {
+}: Props) => {
     const router = useRouter();
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -36,6 +48,20 @@ const LoginPage = ({
         if (error) setError('');
     };
 
+    const triggerExitAnimationAndNavigate = (path: string) => {
+        const elements = document.querySelectorAll('[data-aos]');
+        elements.forEach(el => el.classList.remove('aos-animate'));
+
+        setTimeout(() => {
+            router.push(path);
+        }, 800);
+    };
+
+    const handleNavigation = (e: React.MouseEvent<HTMLAnchorElement>, path: string) => {
+        e.preventDefault();
+        triggerExitAnimationAndNavigate(path);
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
@@ -48,376 +74,310 @@ const LoginPage = ({
             if (data?.token) {
                 localStorage.setItem('token', data.token);
             }
-            if (isSignup && !data.token) {
-                router.push('/login');
-            } else {
-                router.push('/');
-            }
+            
+            const nextPath = (isSignup && !data.token) ? '/login' : '/';
+            triggerExitAnimationAndNavigate(nextPath);
 
         } catch (err: any) {
             setError(err.message || 'An error occurred');
-        } finally {
             setLoading(false);
         }
     };
 
+    useEffect(() => {
+        AOS.init({ duration: 800, once: true });
+    }, []);
+
     return (
-        <div className="auth-container">
-            <div className="auth-card">
-                <div className="form-side">
-                        <div className="auth-content">
+        <Box sx={{
+            minHeight: '100vh',
+            display: 'grid',
+            placeItems: 'center',
+            padding: '24px',
+            backgroundImage: 'linear-gradient(10deg, rgba(0, 229, 255 , 0.1) , #0A0F14)',            
+        }}>
+            <Box sx={{
+                width: '100%',
+                maxWidth: '1000px',
+                height: '600px',
+                background: '#0A0F14',
+                borderRadius: '32px',
+                overflow: 'hidden',
+                boxShadow: '0 10px 20px 0px #00E5FF',
+                border: '1px solid rgba(255,255,255,0.05)',
+                zIndex: 50,
+            }}>
+                <Box sx={{
+                    display: 'grid',
+                    gridTemplateColumns: { xs: '1fr', md: '0.85fr 1fr' },
+                    width: '100%',
+                    height: '100%',
+                }}>
+                    <Box
+                    data-aos="fade-right"
+                    sx={{
+                        padding: '48px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        bgcolor:'#0A0F14',
+                        clipPath: 'polygon(0 0, 85% 0, 90% 100%, 0 100%)',
+                    }}>
+                        <Box sx={{ width: '100%', maxWidth: '360px', margin: '0 auto' }}>
 
-                        <div className="brand-header">
-                            <div className="logo-icon">
-                                <FiLayers />
-                            </div>
-                            <span className="brand-name">Libris</span>
-                        </div>
-                        
-                        <header>
-                            <h3 className="title">{headerText}</h3>
-                            <p className="subtitle">
-                                {isSignup ? 'Already a member?' : 'New to Libris?'}
-                                <Link href={isSignup ? "/login" : "/signup"} className="auth-link">
-                                    {isSignup ? 'Log in' : 'Create account'}
-                                </Link>
-                            </p>
-                        </header>
+                            <Box component="header">
+                                <Typography sx={{
+                                    fontSize: '1.84rem',
+                                    color: 'white',
+                                    fontWeight: 800,
+                                    letterSpacing: '0.10rem',
+                                    display:'flex',
+                                    alignItems:'center',
+                                    justifyContent:'center',
+                                    mb:'30px'
+                                }}>
+                                    {headerText}
+                                </Typography>
+                            </Box>
 
-                        {error && (
-                            <div className="error-message">
-                                {error}
-                            </div>
-                        )}
+                            {error && (
+                                <Alert severity="error" sx={{
+                                    background: 'rgba(248, 81, 73, 0.1)',
+                                    color: '#ff7b72',
+                                    border: '1px solid rgba(248, 81, 73, 0.2)',
+                                    borderRadius: '8px',
+                                    fontSize: '0.9rem',
+                                    mb: '24px',
+                                }}>
+                                    {error}
+                                </Alert>
+                            )}
 
-                        <form onSubmit={handleSubmit} className="auth-form">
-                            <div className="input-group">
-                                <label>Username</label>
-                                <div className="input-wrapper">
-                                    <FiUser style={{ position:'absolute', margin:'0 15px' }} className="input-icon" />
-                                    <input
+                            <Box component="form" onSubmit={handleSubmit} sx={{ display: 'grid', gap: '50px' }}>
+                                <Stack gap="10px">
+                                    <TextField
                                         type="text"
                                         name="Username"
                                         placeholder="Enter your username"
                                         value={formData.Username}
                                         onChange={handleChange}
                                         required
-                                        className="form-input"
+                                        InputProps={{
+                                            startAdornment: (
+                                                <InputAdornment position="start">
+                                                    <FiUser color="#8b949e" size={18} />
+                                                </InputAdornment>
+                                            ),
+                                        }}
+                                        sx={{
+                                            '& .MuiOutlinedInput-root': {
+                                                borderRadius: '12px',
+                                                color: 'white',
+                                                fontSize: '0.95rem',
+                                                borderTop:'none',
+                                                '& fieldset': {
+                                                    boxShadow: '0 5px 3px -2px rgb(160, 170, 178)' ,
+                                                    borderTop: 'none',
+                                                    borderLeft: 'none',
+                                                    borderRight: 'none',
+                                                    borderRadius: 0,
+                                                },
+                                            },
+                                            '& input::placeholder': { color: '#8b949e', opacity: 1 },
+                                        }}
                                     />
-                                </div>
-                            </div>
+                                </Stack>
 
-                            <div className="input-group">
-                                <label>Password</label>
-                                <div className="input-wrapper">
-                                    <FiLock style={{position:'absolute' , margin:'0 15px' }} className="input-icon" />
-                                    <input
-                                        type={showPassword ? "text" : "password"}
+                                <Stack gap="10px">
+                                    <TextField
+                                        type={showPassword ? 'text' : 'password'}
                                         name="password"
                                         placeholder="Enter your password"
                                         value={formData.password}
                                         onChange={handleChange}
                                         required
-                                        className="form-input"
+                                        InputProps={{
+                                            startAdornment: (
+                                                <InputAdornment position="start">
+                                                    <FiLock color="#8b949e" size={18} />
+                                                </InputAdornment>
+                                            ),
+                                            endAdornment: (
+                                                <InputAdornment position="end">
+                                                    <IconButton
+                                                        onClick={() => setShowPassword(!showPassword)}
+                                                        edge="end"
+                                                        sx={{ color: '#8b949e', '&:hover': { color: 'white' } }}
+                                                    >
+                                                        {showPassword ? <FiEyeOff /> : <FiEye />}
+                                                    </IconButton>
+                                                </InputAdornment>
+                                            ),
+                                        }}
+                                        sx={{
+                                            '& .MuiOutlinedInput-root': {
+                                                borderRadius: '12px',
+                                                color: 'white',
+                                                fontSize: '0.95rem',
+                                                '& fieldset': { 
+                                                    boxShadow: '0 5px 3px -2px rgb(160, 170, 178)' ,
+                                                    borderTop: 'none',
+                                                    borderLeft: 'none',
+                                                    borderRight: 'none',
+                                                    borderRadius: 0,
+                                                },
+                                                '&:hover fieldset': { borderColor: '#58a6ff' },
+                                                '&.Mui-focused fieldset': { borderColor: '#58a6ff', boxShadow: '0 0 0 4px rgba(88,166,255,0.1)' },
+                                                '&.Mui-focused': { background: '#161b22' },
+                                            },
+                                            '& input::placeholder': { color: '#8b949e', opacity: 1 },
+                                        }}
                                     />
-                                    <button
-                                        type="button"
-                                        className="password-toggle"
-                                        onClick={() => setShowPassword(!showPassword)}
-                                    >
-                                        {showPassword ? <FiEyeOff /> : <FiEye />}
-                                    </button>
-                                </div>
-                            </div>
+                                </Stack>
 
-                            <button
-                                type="submit"
-                                className="submit-btn"
-                                disabled={loading}
-                            >
-                                <span>{loading ? btnTextLoading : btnText}</span>
-                                {!loading && <FiArrowRight />}
-                            </button>
-                        </form>
-                    </div>
-                </div>
+                                <Button
+                                    type="submit"
+                                    disabled={loading}
+                                    endIcon={!loading ? <FiArrowRight /> : undefined}
+                                    sx={{
+                                        mt: '10px',
+                                        width: '100%',
+                                        backgroundImage: 'linear-gradient(10deg, rgb(0, 229, 255 ) , #0A0F14)',
+                                        border: '1px solid rgba(255,255,255,0.1)',
+                                        color: 'white',
+                                        padding: '14px',
+                                        borderRadius: '50px',
+                                        fontSize: '1rem',
+                                        fontWeight: 600,
+                                        textTransform: 'none',
+                                        boxShadow: '0 4px 12px rgba(46,160,67,0.2)',
+                                        '&:hover:not(:disabled)': {
+                                            filter: 'brightness(1.1)',
+                                            transform: 'translateY(-1px)',
+                                            backgroundImage: 'linear-gradient(10deg, rgba(0, 229, 255 , 0.1) , #0A0F14)',
+                                        },
+                                        '&:disabled': {
+                                            opacity: 0.7,
+                                            cursor: 'not-allowed',
+                                            filter: 'grayscale(0.5)',
+                                            color: 'white',
+                                        },
+                                    }}
+                                >
+                                    {loading ? btnTextLoading : btnText}
+                                </Button>
 
-                <div className="visual-side">
-                    <div className="visual-content">
-                        <div className="brand-header">
-                            <div className="logo-icon">
-                                <FiLayers />
-                            </div>
-                            <span className="brand-name-sec2">Libris</span>
-                        </div>
+                                <Stack direction="column" gap="15px" sx={{ 
+                                    color: '#8b949e', 
+                                    fontSize: '0.95rem',
+                                    display:'flex',
+                                    alignItems:'center',
+                                    justifyContent:'center',
+                                    flexDirection:'column',
+                                    mt:'-20px'
+                                    }}>
+                                    <Typography sx={{ 
+                                        color: '#8b949e', 
+                                        fontSize: '0.95rem', 
+                                        width:'100%',
+                                        display:'flex',
+                                        alignItems:'center',
+                                        justifyContent:'center', 
+                                    }}>
+                                        {isSignup ? 'Already a member?' : 'New to Libris? Create account here'}
+                                    </Typography>
+                                    <Typography 
+                                        component="a" 
+                                        href={isSignup ? "/login" : "/signup"}
+                                        onClick={(e: React.MouseEvent<HTMLAnchorElement>) => handleNavigation(e, isSignup ? "/login" : "/signup")}
+                                        sx={{
+                                            color: '#58a6ff',
+                                            textDecoration: 'none',
+                                            fontWeight: 600,
+                                            width:'100%',
+                                            display:'flex',
+                                            alignItems:'center',
+                                            justifyContent:'center',
+                                            cursor: 'pointer',
+                                    }}>
+                                        {isSignup ? 'Log in' : 'Create account'}
+                                    </Typography>
+                                </Stack>
 
-                        <h2>Curated Knowledge.</h2>
-                        <p>Access thousands of resources from our distributed library network.</p>
-                    </div>
-                    <div className="visual-overlay" />
-                    <img
-                        src="https://images.unsplash.com/photo-1481627834876-b7833e8f5570?auto=format&fit=crop&q=80&w=2828"
-                        alt="Library"
-                        className="visual-bg"
-                    />
-                </div>
-            </div>
+                            </Box>
+                        </Box>
+                    </Box>
 
-            <style jsx>{`
-                .auth-container {
-                    min-height: 100vh;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    padding: 24px;
-                    background-image:Url('/login-background.webp');
-                    background-repeat:no-repeat;
-                    background-size:cover;
-                }
+                    <Box
+                    data-aos="fade-left"
+                    sx={{
+                        position: 'relative',
+                        display: { xs: 'none', md: 'flex' },
+                        clipPath: 'polygon(0% 0, 100% 0, 100% 100%, 20% 100%)', 
+                        alignItems:'center',
+                        justifyContent:'center',
+                        bgcolor:'#1A7B8E'                    
+                    }}>
+                        <Box sx={{
+                            position: 'absolute',
+                            left: '78px',
+                            zIndex: 10,
+                            p:'5px'
+                        }}>
+                            <Stack direction="row" alignItems="center" gap="12px" >
+                                <Box sx={{
+                                    width: 32, height: 32,
+                                    background: 'linear-gradient(to top, rgba(15,17,21,0.9), #58a6ff )',
+                                    borderRadius: '8px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    color: 'white',
+                                    mb: '10px',
+                                    m:'5px'
+                                }}>
+                                    <FiLayers />
+                                </Box>
+                                <Typography sx={{
+                                    fontSize: '1.7rem',
+                                    fontWeight: 700,
+                                    color: '#fff',
+                                    letterSpacing: '2px',
+                                    mb: '10px',
+                                }}>
+                                    Libris
+                                </Typography>
+                            </Stack>
 
-                .auth-card {
-                    width: 100%;
-                    max-width: 1000px;
-                    height: 600px;
-                    background: #161b22;
-                    border-radius: 32px;
-                    overflow: hidden;
-                    display: flex;
-                    box-shadow: 0 40px 80px -20px rgba(0,0,0,0.5);
-                    border: 1px solid rgba(255,255,255,0.05);
-                    z-index:50
-                }
+                            <Typography variant="h2" sx={{
+                                fontSize: '2.5rem',
+                                color: 'white',
+                                margin: '0 0 16px 0',
+                                lineHeight: 1.1,
+                            }}>
+                                Curated Knowledge.
+                            </Typography>
+                            <Typography sx={{
+                                color: 'rgba(255,255,255,0.8)',
+                                fontSize: '1.1rem',
+                                lineHeight: 1.5
+                            }}>
+                                Access thousands of research papers from our distributed library network.
+                            </Typography>
+                        </Box>
 
-                .form-side {
-                    flex: 1;
-                    padding: 48px;
-                    display: flex;
-                    flex-direction: column;
-                    align-item:center;
-                    justify-content:center;
-                }
+                        <Box sx={{
+                            position: 'absolute',
+                            inset: 0,
+                            background: 'linear-gradient(to top, rgba(15,17,21,0.9), rgba(15,17,21,0.2))',
+                            zIndex: 1,
+                        }} />
+                    </Box>
 
-                .brand-header {
-                    display: flex;
-                    align-items: center;
-                    gap: 12px;
-                    justify-content:flex-start;
-                    width:100%;
-                    maxWidth:360px;
-                }
-
-                .logo-icon {
-                    width: 32px;
-                    height: 32px;
-                    background: linear-gradient(135deg, #58a6ff, #238636);
-                    border-radius: 8px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    color: white;
-                    margin-bottom:10px
-                }
-
-                .brand-name {
-                    font-size: 1.7rem;
-                    font-weight: 700;
-                    color: #fff;
-                    letter-spacing: 2px;
-                    margin-bottom:10px
-                }
-
-                .brand-name-sec2 {
-                    font-size: 1.7rem;
-                    font-weight: 700;
-                    color: #fff;
-                    letter-spacing: 2px;
-                    margin-bottom:10px
-                }
-
-                .auth-content {
-                    width: 100%;
-                    max-width: 360px;
-                    margin: 0 auto;
-                }
-
-                .title {
-                    font-size: 1.84rem;
-                    color: white;
-                    margin: 0 auto;
-                    font-weight: 800;
-                    letter-spacing: 0.10rem;
-
-                }
-
-                .subtitle {
-                    color: #8b949e;
-                    margin: 5px 0 30px 0;
-                    font-size: 0.95rem;
-                    display:flex;
-                    gap:15px
-                }
-
-                .auth-link {
-                    color: #58a6ff;
-                    text-decoration: none;
-                    margin-left: 6px;
-                    font-weight: 600;
-                    transition: color 0.2s;
-                }
-
-                .auth-link:hover { color: #79c0ff; }
-
-                .auth-form {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 30px;
-                }
-
-                .input-group label {
-                    display: block;
-                    color: #8b949e;
-                    font-size: 0.85rem;
-                    margin-bottom: 10px;
-                    font-weight: 500;
-                }
-
-                .input-wrapper {
-                    position: relative;
-                    display: flex;
-                    align-items: center;
-                }
-
-                .input-icon {
-                    position: absolute;
-                    left: 16px;
-                    color: #8b949e;
-                    font-size: 18px;
-                    z-index: 2;
-                }
-
-                .form-input {
-                    width: 100%;
-                    background: #0d1117;
-                    border: 1px solid #30363d;
-                    border-radius: 12px;
-                    padding: 14px 16px 14px 48px;
-                    color: white;
-                    font-size: 0.95rem;
-                    transition: all 0.2s;
-                }
-
-                .form-input:focus {
-                    outline: none;
-                    border-color: #58a6ff;
-                    box-shadow: 0 0 0 4px rgba(88, 166, 255, 0.1);
-                    background: #161b22;
-                }
-
-                .password-toggle {
-                    position: absolute;
-                    right: 16px;
-                    background: none;
-                    border: none;
-                    color: #8b949e;
-                    cursor: pointer;
-                    padding: 4px;
-                    display: flex;
-                    transition: color 0.2s;
-                }
-
-                .password-toggle:hover { color: white; }
-
-                .submit-btn {
-                    margin-top: 10px;
-                    width: 100%;
-                    background: linear-gradient(135deg, #58a6ff, #238636);
-                    border: 1px solid rgba(255,255,255,0.1);
-                    color: white;
-                    padding: 14px;
-                    border-radius: 12px;
-                    font-size: 1rem;
-                    font-weight: 600;
-                    cursor: pointer;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    gap: 8px;
-                    transition: all 0.2s;
-                    box-shadow: 0 4px 12px rgba(46, 160, 67, 0.2);
-                }
-
-                .submit-btn:hover:not(:disabled) {
-                    filter: brightness(1.1);
-                    transform: translateY(-1px);
-                    box-shadow: 0 6px 16px rgba(46, 160, 67, 0.3);
-                }
-
-                .submit-btn:disabled {
-                    opacity: 0.7;
-                    cursor: not-allowed;
-                    filter: grayscale(0.5);
-                }
-
-                .error-message {
-                    background: rgba(248, 81, 73, 0.1);
-                    color: #ff7b72;
-                    padding: 12px;
-                    border-radius: 8px;
-                    font-size: 0.9rem;
-                    margin-bottom: 24px;
-                    border: 1px solid rgba(248, 81, 73, 0.2);
-                }
-
-                .footer-meta {
-                    color: #484f58;
-                    font-size: 0.8rem;
-                    text-align: center;
-                }
-
-                .visual-side {
-                    flex: 1;
-                    position: relative;
-                    display: none;
-                }
-
-                .visual-bg {
-                    width: 100%;
-                    height: 100%;
-                    object-fit: cover;
-                }
-
-                .visual-overlay {
-                    position: absolute;
-                    inset: 0;
-                    background: linear-gradient(to top, rgba(15, 17, 21, 0.9), rgba(15, 17, 21, 0.2));
-                }
-
-                .visual-content {
-                    position: absolute;
-                    bottom: 75px;
-                    left: 48px;
-                    right: 48px;
-                    z-index: 10;
-                }
-
-                .visual-content h2 {
-                    font-size: 2.5rem;
-                    color: white;
-                    margin: 0 0 16px 0;
-                    line-height: 1.1;
-                }
-
-                .visual-content p {
-                    color: rgba(255,255,255,0.8);
-                    font-size: 1.1rem;
-                    line-height: 1.5;
-                }
-
-                @media (min-width: 900px) {
-                    .visual-side { display: block; }
-                }
-            `}</style>
-        </div>
+                </Box>
+            </Box>
+        </Box>
     );
 };
 
