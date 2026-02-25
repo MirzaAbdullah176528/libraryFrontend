@@ -1,10 +1,8 @@
 'use client'
-import React, { useState } from 'react';
-import { FiMapPin, FiArrowRight, FiEdit2, FiTrash2 } from 'react-icons/fi';
-import { apiService } from '../../service/api';
-import BookCard from './bookCard';
+import React, { useEffect, useState } from 'react';
+import { MapPin, Edit2, Trash2 } from 'lucide-react';
 import Link from 'next/link';
-import LibraryBooksPage from '../LibraryBooks/page';
+import { Card, CardMedia, Typography, Box, Stack, Chip, ButtonBase } from '@mui/material';
 
 interface LibraryProps {
   _id: string;
@@ -19,190 +17,165 @@ interface LibraryCardProps {
   onDelete?: () => void;
 }
 
-interface Book {
-  _id: string;
-  name: string;
-  category: string;
-  image?: string;
-  Created_By?: { username: string };
-  library?: { name: string };
-}
+const randomLibraryCovers: string[] = [
+  "https://images.unsplash.com/photo-1541963463532-d68292c34b19?q=80&w=800&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1568667256549-094345857637?q=80&w=800&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1521587760476-6c12a4b040da?q=80&w=800&auto=format&fit=crop"
+];
 
 const LibraryCard = ({ library, onEdit, onDelete }: LibraryCardProps) => {
+  const [coverImage, setCoverImage] = useState<string>(randomLibraryCovers[0]);
+
+  useEffect(() => {
+    const randomIndex = Math.floor(Math.random() * randomLibraryCovers.length);
+    setCoverImage(randomLibraryCovers[randomIndex]);
+  }, []);
 
   return (
-    <div className="library-card">
-      <div className="library-card-header">
-        <div className="icon-box">
-          <FiMapPin size={24} />
-        </div>
-        <div className="library-actions">
+    <Card 
+      sx={{ 
+        bgcolor: '#0a0a0a',
+        borderRadius: '24px',
+        overflow: 'hidden',
+        position: 'relative',
+        height: 380,
+        boxShadow: 'none',
+        border: '1px solid rgba(255, 255, 255, 0.05)',
+        '&:hover .library-cover': { transform: 'scale(1.04)' }
+      }}
+    >
+      <CardMedia
+        component="img"
+        className="library-cover"
+        image={coverImage}
+        alt={library.name}
+        onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+          e.currentTarget.src = "/default-library.webp";
+        }}
+        sx={{ 
+          position: 'absolute',
+          inset: 0,
+          width: '100%', 
+          height: '100%', 
+          objectFit: 'cover', 
+          transition: 'transform 0.5s ease-out',
+        }}
+      />
+
+      <Box 
+        sx={{
+          position: 'absolute',
+          inset: 0,
+          background: 'linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.4) 50%, rgba(0,0,0,0.95) 100%)',
+        }} 
+      />
+
+      <Box 
+        sx={{ 
+          position: 'absolute', 
+          top: 16, 
+          left: 16, 
+          right: 16, 
+          display: 'flex', 
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}
+      >
+        <Chip 
+          label={library.category ? (library.category.length < 15 ? library.category : library.category.slice(0, 15) + '...') : 'LIBRARY'}
+          sx={{
+            bgcolor: 'rgba(255, 255, 255, 0.1)',
+            backdropFilter: 'blur(10px)',
+            color: '#ffffff',
+            fontWeight: 600,
+            fontSize: '11px',
+            textTransform: 'uppercase',
+            letterSpacing: '0.5px',
+            height: '26px',
+            border: 'none'
+          }}
+        />
+        
+        <Box sx={{ display: 'flex', gap: 1 }}>
           {onEdit && (
-            <button
-              className="action-btn edit-btn"
+            <ButtonBase 
               onClick={onEdit}
+              sx={{
+                bgcolor: 'rgba(88, 166, 255, 0.2)',
+                backdropFilter: 'blur(10px)',
+                color: '#58a6ff',
+                padding: '6px',
+                borderRadius: '50%',
+                transition: 'background-color 0.2s',
+                '&:hover': {
+                  bgcolor: 'rgba(88, 166, 255, 0.3)',
+                }
+              }}
             >
-              <FiEdit2 />
-              <span>Edit</span>
-            </button>
+              <Edit2 size={16} />
+            </ButtonBase>
           )}
           {onDelete && (
-            <button
-              className="action-btn delete-btn"
+            <ButtonBase 
               onClick={onDelete}
+              sx={{
+                bgcolor: 'rgba(248, 81, 73, 0.2)',
+                backdropFilter: 'blur(10px)',
+                color: '#ff7b72',
+                padding: '6px',
+                borderRadius: '50%',
+                transition: 'background-color 0.2s',
+                '&:hover': {
+                  bgcolor: 'rgba(248, 81, 73, 0.3)',
+                }
+              }}
             >
-              <FiTrash2 />
-              <span>Delete</span>
-            </button>
+              <Trash2 size={16} />
+            </ButtonBase>
           )}
-        </div>
-      </div>
+        </Box>
+      </Box>
 
-      <div className="info">
-        <h3 className="lib-name">{library.name}</h3>
-        {library.category && (
-          <div className="library-category">
-            {library.category}
-          </div>
-        )}
-        <p className="lib-address">{library.address}</p>
-      </div>
+      <Box 
+        sx={{ 
+          position: 'absolute', 
+          bottom: 0, 
+          left: 0, 
+          right: 0, 
+          p: 3,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 1.5
+        }}
+      >
+        <Link 
+          href={`/LibraryBooks?id=${library._id}`}
+          style={{ textDecoration: 'none' }}
+        > 
+          <Typography 
+            variant="h5" 
+            sx={{ 
+              color: '#ffffff', 
+              fontWeight: 700,
+              lineHeight: 1.2,
+              transition: 'color 0.2s',
+              '&:hover': { color: '#e2e2e2' }
+            }}
+          >
+            {library.name.length < 40 ? library.name : library.name.slice(0, 40) + '...'}
+          </Typography>
+        </Link>
 
-      <Link style={{ textDecoration: 'none' }} href={`/LibraryBooks?id=${library._id}`}>
-        <button
-          className="visit-btn">
-          <span>View Books</span>
-          <FiArrowRight />
-        </button>
-      </Link>
-
-      <style jsx>{`
-        .library-card {
-          background: #161b22;
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          border-radius: 16px;
-          padding: 24px;
-          display: flex;
-          flex-direction: column;
-          gap: 20px;
-          height: 100%;
-          transition: transform 0.2s;
-        }
-
-        .library-card:hover {
-          transform: translateY(-4px);
-        }
-
-        .library-card-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-        }
-
-        .icon-box {
-          width: 56px;
-          height: 56px;
-          background: linear-gradient(135deg, #1f6feb, #111827);
-          border-radius: 16px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: #58a6ff;
-          box-shadow: 0 8px 20px rgba(31, 111, 235, 0.15);
-        }
-
-        .library-actions {
-          display: flex;
-          gap: 8px;
-        }
-
-        .info {
-          flex: 1;
-        }
-
-        .lib-name {
-          font-size: 1.25rem;
-          margin: 0 0 12px 0;
-          color: #fff;
-          font-weight: 700;
-        }
-
-        .library-category {
-          display: inline-block;
-          background: rgba(88, 166, 255, 0.1);
-          color: #58a6ff;
-          padding: 4px 12px;
-          border-radius: 20px;
-          font-size: 0.8rem;
-          font-weight: 500;
-          margin-bottom: 16px;
-        }
-
-        .lib-address {
-          margin: 0;
-          color: #8b949e;
-          line-height: 1.5;
-          font-size: 0.95rem;
-        }
-
-        .visit-btn {
-          width: 100%;
-          padding: 14px;
-          background: #21262d;
-          border: 1px solid #30363d;
-          color: #fff;
-          border-radius: 12px;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 8px;
-          font-weight: 600;
-          transition: all 0.2s;
-        }
-
-        .visit-btn:hover {
-          background: #58a6ff;
-          color: #fff;
-          border-color: #58a6ff;
-        }
-
-        .action-btn {
-          padding: 10px 16px;
-          border-radius: 10px;
-          font-weight: 500;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          transition: all 0.2s;
-          font-size: 0.9rem;
-          border: none;
-        }
-
-        .edit-btn {
-          background: rgba(88, 166, 255, 0.1);
-          color: #58a6ff;
-          border: 1px solid rgba(88, 166, 255, 0.2);
-        }
-
-        .edit-btn:hover {
-          background: rgba(88, 166, 255, 0.2);
-          transform: translateY(-1px);
-        }
-
-        .delete-btn {
-          background: rgba(248, 81, 73, 0.1);
-          color: #ff7b72;
-          border: 1px solid rgba(248, 81, 73, 0.2);
-        }
-
-        .delete-btn:hover {
-          background: rgba(248, 81, 73, 0.2);
-          transform: translateY(-1px);
-        }
-      `}</style>
-    </div>
+        <Stack spacing={1}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+            <MapPin size={14} color="#a1a1aa" />
+            <Typography sx={{ color: '#a1a1aa', fontSize: '0.8rem', fontWeight: 500 }}>
+              {library.address.length < 45 ? library.address : library.address.slice(0, 45) + '...'}
+            </Typography>
+          </Box>
+        </Stack>
+      </Box>
+    </Card>
   );
 };
 

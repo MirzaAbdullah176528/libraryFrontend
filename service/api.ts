@@ -120,4 +120,7 @@ export const apiService = {
 
   getRes: (prompt: { name: string; category: string; topic: string }) =>
     request('/chat', { method: 'POST', body: prompt }),
+
+  getSummary: (prompt: { name: string; category: string; author: string }) =>
+    request('/chat/summaries', { method: 'POST', body: prompt }),
 };

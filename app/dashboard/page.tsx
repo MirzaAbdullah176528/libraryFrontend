@@ -1,19 +1,24 @@
 'use client'
 
 import { useState, useEffect } from 'react';
-import { FiEdit2, FiTrash2, FiPlus, FiBook, FiBookOpen, FiUser, FiLogOut } from 'react-icons/fi';
+import { 
+  FiEdit2, FiTrash2, FiPlus, FiBook, FiBookOpen, 
+  FiUser, FiLayers, FiLogOut 
+} from 'react-icons/fi';
+import { BsFillBuildingFill } from 'react-icons/bs';
+import Link from 'next/link';
+import { 
+  Box, Typography, Button, IconButton, CircularProgress, Avatar, Stack
+} from '@mui/material';
+
 import BookUpdateForm from '../components/BookUpdateForm';
 import BookCard from '../components/bookCard';
 import BookCreateForm from '../components/BookCreateForm';
 import LibraryCard from '../components/libraryCard';
 import LibraryUpdateForm from '../components/libraryUpdatefoam';
 import UserUpdateForm from '../components/userUpdate';
-import { apiService } from '../../service/api';
-import { authService } from '../../service/api';
-import Link from 'next/link';
 import Chat from '../components/chat';
-import { FiEye, FiEyeOff, FiLock, FiArrowRight, FiLayers } from 'react-icons/fi';
-import { BsFillBuildingFill } from 'react-icons/bs';
+import { apiService, authService } from '../../service/api';
 
 interface Book {
   _id: string;
@@ -23,6 +28,7 @@ interface Book {
   author?: string;
   library?: { name: string; _id: string };
   Created_By?: { username: string };
+  pdfLink?: string;
 }
 
 interface Library {
@@ -57,40 +63,41 @@ export default function Dashboard() {
   const [selectedLibrary, setSelectedLibrary] = useState<Library | null>(null);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [createType, setCreateType] = useState<'book' | 'library'>('book');
-  const [userStats, setUserStats] = useState({
-    totalBooks: 0,
-    totalLibraries: 0
-  });
+  const [userStats, setUserStats] = useState({ totalBooks: 0, totalLibraries: 0 });
 
-  
-  const [currentUser, setCurrentUser] = useState<any>({ userId: '', username: '', avatar: '' });
+  const [currentUser, setCurrentUser] = useState<User>({ _id: '', userId: '', username: '', Username: '', avatar: '' });
 
-  const API_URL = 'http://localhost:5000';
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
   async function getUser() {
-    let user = await authService.getCurrentUser();
-
-    if (user) {
-      const userMetaData = {
-        userId: user.userId || user._id || user.id,
-        username: user.username || user.Username
-      };
-      let userData = await apiService.getProfile(userMetaData.userId)
-      if (userData) {
-        const normalizedUser = {
-          userId: userData._id,
-          username: userData.Username,
-          avatar: userData.avatar
+    try {
+      const user = await authService.getCurrentUser();
+      if (user) {
+        const userId = user.userId || user._id || user.id;
+        const username = user.username || user.Username;
+        
+        if (userId) {
+          const userData = await apiService.getProfile(userId);
+          if (userData) {
+            const normalizedUser = {
+              _id: userData._id,
+              userId: userData._id,
+              username: userData.Username,
+              Username: userData.Username,
+              avatar: userData.avatar
+            };
+            setCurrentUser(normalizedUser);
+            fetchDashboardData(normalizedUser.userId, normalizedUser.username);
+          }
         }
-
-        setCurrentUser(normalizedUser);
-        fetchDashboardData(normalizedUser.userId, normalizedUser.username);
       }
+    } catch (error) {
+      console.error(error);
     }
   }
 
   useEffect(() => {
-    getUser()
+    getUser();
   }, []);
 
   const fetchDashboardData = async (userId: string, username: string) => {
@@ -158,56 +165,48 @@ export default function Dashboard() {
 
   const handleEditUser = () => {
     const userData: User = {
-      avatar: currentUser?.avatar || 'no image',
-      _id: currentUser?.userId || '1',
-      Username: currentUser?.username || 'Demo User'
+      avatar: currentUser?.avatar || '',
+      _id: currentUser?.userId || '',
+      Username: currentUser?.username || 'User'
     };
     setSelectedUser(userData);
     setShowUserUpdateForm(true);
   };
 
   const handleDeleteBook = async (bookId: string) => {
-    if (!confirm('Are you sure you want to delete this book?')) return;
     try {
       await apiService.deleteBook(bookId);
       setUserBooks(prev => prev.filter(book => book._id !== bookId));
       setUserStats(prev => ({ ...prev, totalBooks: prev.totalBooks - 1 }));
-      alert('Book deleted successfully!');
     } catch (error) {
       console.error(error);
-      alert('Failed to delete book');
     }
   };
 
   const handleDeleteLibrary = async (libraryId: string) => {
-    if (!confirm('Are you sure you want to delete this library?')) return;
     try {
       await apiService.deleteLibrary(libraryId);
       setUserLibraries(prev => prev.filter(lib => lib._id !== libraryId));
       setUserStats(prev => ({ ...prev, totalLibraries: prev.totalLibraries - 1 }));
-      alert('Library deleted successfully!');
     } catch (error) {
       console.error(error);
-      alert('Failed to delete library');
     }
   };
 
-  
   const handleDeleteAccount = async () => {
-    if (
-      !confirm(
-        'Are you sure you want to permanently delete your account? This cannot be undone.'
-      )
-    )
-      return;
-
     try {
-      await apiService.deleteUser(currentUser.userId);
-      authService.logout();
-    } catch (error: any) {
+      if (currentUser.userId) {
+        await apiService.deleteUser(currentUser.userId);
+        authService.logout();
+      }
+    } catch (error) {
       console.error(error);
-      alert(error.message || 'Failed to delete account');
     }
+  };
+
+  const handleLogout = () => {
+    authService.logout();
+    window.location.href = '/login';
   };
 
   const handleBookUpdateSuccess = (updatedBook: Book) => {
@@ -236,7 +235,6 @@ export default function Dashboard() {
       }
     }
     setShowUserUpdateForm(false);
-    alert('User details updated successfully!');
     window.location.reload();
   };
 
@@ -254,10 +252,6 @@ export default function Dashboard() {
     setCreateType('book');
   };
 
-  const handleLogout = () => {
-    authService.logout();
-  };
-
   const handleOpenCreateForm = (type: 'book' | 'library') => {
     setCreateType(type);
     setShowCreateForm(true);
@@ -265,18 +259,19 @@ export default function Dashboard() {
 
   const getSafeBook = (book: Book): Book => ({
     _id: book._id || '',
-    name: book.name || 'Unknown Book',
-    category: book.category || 'Uncategorized',
+    name: book.name || 'Unknown',
+    category: book.category || 'General',
     image: book.image,
     library: book.library,
     Created_By: book.Created_By,
-    author: book.author
+    author: book.author,
+    pdfLink: book.pdfLink
   });
 
   const getSafeLibrary = (library: Library): Library => ({
     _id: library._id || '',
-    name: library.name || 'Unknown Library',
-    address: library.address || 'No address provided',
+    name: library.name || 'Unknown',
+    address: library.address || 'No address',
     category: library.category || 'General',
     Created_By: library.Created_By
   });
@@ -289,744 +284,306 @@ export default function Dashboard() {
 
   if (loading.books && loading.libraries) {
     return (
-      <div className="dashboard-loading">
-        <div className="spinner"></div>
-        <p>Loading your dashboard...</p>
-        <style jsx>{`
-          .dashboard-loading {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            background: #0d1117;
-            color: #fff;
-          }
-          .spinner {
-            width: 50px;
-            height: 50px;
-            border: 3px solid rgba(255, 255, 255, 0.1);
-            border-radius: 50%;
-            border-top-color: #58a6ff;
-            animation: spin 1s ease-in-out infinite;
-            margin-bottom: 20px;
-          }
-          @keyframes spin {
-            to { transform: rotate(360deg); }
-          }
-        `}</style>
-      </div>
+      <Box sx={{ minHeight: '100vh', display: 'grid', placeItems: 'center', bgcolor: '#0A0F14', backgroundImage: 'linear-gradient(10deg, rgba(0, 229, 255 , 0.1) , #0A0F14)' }}>
+        <CircularProgress sx={{ color: '#00E5FF' }} size={48} thickness={4} />
+      </Box>
     );
   }
 
   return (
-    <div className="dashboard-container">
-      <aside className="sidebar">
-        <div className="sidebar-header">
-          <div style={{ display: 'flex', height: '100%' }}>
-            <Link style={{ textDecoration: 'none' }} href={'/'}>
-              <div className="brand-header">
-                <div className="logo-icon">
-                  <FiLayers />
-                </div>
-                <span className="brand-name">Libris</span>
-              </div>
-            </Link>
-          </div>
-        </div>
+    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#0A0F14', backgroundImage: 'linear-gradient(10deg, rgba(0, 229, 255 , 0.03) , #0A0F14)', color: '#FFFAFA', fontFamily: '"Inter", sans-serif' }}>
+      <Chat />
 
-        <nav className="sidebar-nav">
-          <div className="nav-section">
-            <h4 className="section-title">Dashboard</h4>
-            <button
-              className={`nav-btn ${activeTab === 'books' ? 'active' : ''}`}
-              onClick={() => setActiveTab('books')}
-            >
-              <FiBook />
-              <span>My Books</span>
-              <span className="nav-count">{userBooks.length}</span>
-            </button>
-            <button
-              className={`nav-btn ${activeTab === 'libraries' ? 'active' : ''}`}
-              onClick={() => setActiveTab('libraries')}
-            >
-              <FiBookOpen />
-              <span>My Libraries</span>
-              <span className="nav-count">{userLibraries.length}</span>
-            </button>
-          </div>
+      <Box component="aside" sx={{
+        width: 280,
+        flexShrink: 0,
+        bgcolor: '#05080c',
+        borderRight: '1px solid rgba(255,255,255,0.05)',
+        display: { xs: 'none', lg: 'flex' },
+        flexDirection: 'column',
+        position: 'sticky',
+        top: 0,
+        height: '100vh',
+        zIndex: 40,
+      }}>
+        <Box sx={{ p: 4, pb: 3, borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+          <Link href="/" style={{ textDecoration: 'none' }}>
+            <Stack direction="row" alignItems="center" gap={2}>
+              <Box sx={{
+                width: 36, height: 36,
+                borderRadius: '8px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: 'rgba(0, 229, 255, 0.1)',
+                color: '#00E5FF',
+                border: '1px solid rgba(0, 229, 255, 0.2)'
+              }}>
+                <FiLayers size={18} />
+              </Box>
+              <Typography sx={{ fontSize: '1.4rem', fontWeight: 800, color: '#FFFAFA', letterSpacing: '1px' }}>
+                Libris
+              </Typography>
+            </Stack>
+          </Link>
+        </Box>
 
-          <div className="nav-section">
-            <h4 className="section-title">Quick Actions</h4>
-            <button
-              className="nav-btn create-btn"
-              onClick={() => handleOpenCreateForm('book')}
-            >
-              <FiBook />
-              <span>Add New Book</span>
-            </button>
-            <button
-              className="nav-btn create-btn"
-              onClick={() => handleOpenCreateForm('library')}
-            >
-              <BsFillBuildingFill />
-              <span>Add New Library</span>
-            </button>
-            <h4 className="section-title-profile">Update Profile</h4>
-            <button className="nav-btn create-btn" onClick={handleEditUser}>
-              <span>Update details</span>
-            </button>
-          </div>
-        </nav>
+        <Box sx={{ flex: 1, p: 2, display: 'flex', flexDirection: 'column', gap: 1 }}>
+          <Typography sx={{ color: '#8b949e', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1.5px', px: 2, mt: 2, mb: 2 }}>
+            Menu
+          </Typography>
 
-        <div className="sidebar-footer">
-          <div className="user-info">
-            <div className="user-avatar">
-              <Link href={'/profile'}>
-                {currentUser?.avatar ? (
-                  <img
-                    src={`${API_URL}${currentUser.avatar}`}
-                    alt="Profile"
-                    style={{ width: '40px', height: '40px', borderRadius: '50%' }}
-                  />
+          <Button
+            onClick={() => setActiveTab('books')}
+            startIcon={<FiBook />}
+            sx={{
+              justifyContent: 'flex-start',
+              px: 2, py: 1.5,
+              borderRadius: '8px',
+              color: activeTab === 'books' ? '#00E5FF' : '#8b949e',
+              background: activeTab === 'books' ? 'linear-gradient(90deg, rgba(0, 229, 255, 0.1) 0%, transparent 100%)' : 'transparent',
+              borderLeft: activeTab === 'books' ? '3px solid #00E5FF' : '3px solid transparent',
+              textTransform: 'none',
+              fontWeight: 600,
+              fontSize: '0.95rem',
+              transition: 'all 0.2s ease',
+              '&:hover': { 
+                background: activeTab === 'books' ? 'linear-gradient(90deg, rgba(0, 229, 255, 0.15) 0%, transparent 100%)' : 'rgba(255,255,255,0.02)', 
+                color: activeTab === 'books' ? '#00E5FF' : '#FFFAFA' 
+              }
+            }}
+          >
+            My Books
+          </Button>
+
+          <Button
+            onClick={() => setActiveTab('libraries')}
+            startIcon={<FiBookOpen />}
+            sx={{
+              justifyContent: 'flex-start',
+              px: 2, py: 1.5,
+              borderRadius: '8px',
+              color: activeTab === 'libraries' ? '#00E5FF' : '#8b949e',
+              background: activeTab === 'libraries' ? 'linear-gradient(90deg, rgba(0, 229, 255, 0.1) 0%, transparent 100%)' : 'transparent',
+              borderLeft: activeTab === 'libraries' ? '3px solid #00E5FF' : '3px solid transparent',
+              textTransform: 'none',
+              fontWeight: 600,
+              fontSize: '0.95rem',
+              transition: 'all 0.2s ease',
+              '&:hover': { 
+                background: activeTab === 'libraries' ? 'linear-gradient(90deg, rgba(0, 229, 255, 0.15) 0%, transparent 100%)' : 'rgba(255,255,255,0.02)', 
+                color: activeTab === 'libraries' ? '#00E5FF' : '#FFFAFA' 
+              }
+            }}
+          >
+            My Libraries
+          </Button>
+        </Box>
+
+        <Box sx={{ p: 2, borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+          <Button
+            onClick={handleEditUser}
+            sx={{
+              width: '100%',
+              justifyContent: 'flex-start',
+              p: 1.5,
+              borderRadius: '8px',
+              color: '#FFFAFA',
+              textTransform: 'none',
+              '&:hover': { background: 'rgba(255,255,255,0.03)' }
+            }}
+          >
+            <Stack direction="row" alignItems="center" gap={1.5}>
+              {currentUser?.avatar ? (
+                <Avatar src={`${API_URL}${currentUser.avatar}`} sx={{ width: 36, height: 36, border: '1px solid rgba(255,255,255,0.1)' }} />
+              ) : (
+                <Avatar sx={{ width: 36, height: 36, bgcolor: 'rgba(255,255,255,0.05)', color: '#8b949e' }}>
+                  <FiUser size={18} />
+                </Avatar>
+              )}
+              <Box sx={{ textAlign: 'left', overflow: 'hidden' }}>
+                <Typography noWrap sx={{ fontWeight: 600, fontSize: '0.9rem', lineHeight: 1.2 }}>
+                  {currentUser?.username || 'User'}
+                </Typography>
+                <Typography sx={{ color: '#8b949e', fontSize: '0.75rem' }}>Account Settings</Typography>
+              </Box>
+            </Stack>
+          </Button>
+        </Box>
+      </Box>
+
+      <Box component="main" sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+        
+        <Box component="header" sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'flex-end',
+          px: 4, py: 3,
+          borderBottom: '1px solid rgba(255,255,255,0.05)',
+          bgcolor: 'transparent',
+          position: 'sticky',
+          top: 0,
+          zIndex: 30,
+          backdropFilter: 'blur(10px)'
+        }}>
+          <IconButton 
+            onClick={handleLogout}
+            sx={{ 
+              color: '#8b949e', 
+              border: '1px solid rgba(255,255,255,0.05)',
+              borderRadius: '8px',
+              p: 1,
+              '&:hover': { color: '#f85149', borderColor: '#f85149', bgcolor: 'rgba(248, 81, 73, 0.1)' } 
+            }}
+          >
+            <FiLogOut size={18} />
+          </IconButton>
+        </Box>
+
+        <Box sx={{ p: { xs: 3, md: 6 }, maxWidth: 1400, mx: 'auto', width: '100%' }}>
+          
+          <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'flex-end' }, mb: 6, gap: 4 }}>
+            <Box>
+              <Typography variant="h3" sx={{ fontWeight: 800, color: '#FFFAFA', mb: 1, letterSpacing: '-0.5px' }}>
+                {activeTab === 'books' ? 'The Collection' : 'Library Network'}
+              </Typography>
+              <Typography sx={{ color: '#8b949e', fontSize: '1.1rem' }}>
+                {activeTab === 'books' ? 'Explore the curated list of available resources.' : 'Find and manage branches in your network.'}
+              </Typography>
+            </Box>
+
+            <Stack direction="row" gap={2}>
+              {activeTab === 'books' ? (
+                <Button
+                  startIcon={<FiPlus />}
+                  onClick={() => handleOpenCreateForm('book')}
+                  sx={{
+                    background: 'linear-gradient(180deg, rgba(0, 229, 255, 0.9) 0%, rgba(26, 123, 142, 0.9) 100%)',
+                    border: '1px solid rgba(0, 229, 255, 0.4)',
+                    color: '#0A0F14',
+                    px: 3, py: 1.5,
+                    borderRadius: '8px',
+                    fontWeight: 700, textTransform: 'none',
+                    boxShadow: '0 4px 12px rgba(0, 229, 255, 0.2)',
+                    '&:hover': { filter: 'brightness(1.1)' }
+                  }}
+                >
+                  Add New Book
+                </Button>
+              ) : (
+                <Button
+                  startIcon={<BsFillBuildingFill />}
+                  onClick={() => handleOpenCreateForm('library')}
+                  sx={{
+                    background: 'linear-gradient(180deg, rgba(0, 229, 255, 0.9) 0%, rgba(26, 123, 142, 0.9) 100%)',
+                    border: '1px solid rgba(0, 229, 255, 0.4)',
+                    color: '#0A0F14',
+                    px: 3, py: 1.5,
+                    borderRadius: '8px',
+                    fontWeight: 700, textTransform: 'none',
+                    boxShadow: '0 4px 12px rgba(0, 229, 255, 0.2)',
+                    '&:hover': { filter: 'brightness(1.1)' }
+                  }}
+                >
+                  Create Library
+                </Button>
+              )}
+            </Stack>
+          </Box>
+
+          <Stack direction="row" gap={3} sx={{ mb: 6 }}>
+            <Box sx={{ bgcolor: '#0a0d14', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '16px', p: 3, flex: 1, maxWidth: 300 }}>
+              <Typography sx={{ color: '#8b949e', fontSize: '0.85rem', fontWeight: 600, textTransform: 'uppercase', mb: 1 }}>
+                Total Books
+              </Typography>
+              <Typography sx={{ color: '#00E5FF', fontSize: '2.5rem', fontWeight: 800, lineHeight: 1 }}>
+                {userStats.totalBooks}
+              </Typography>
+            </Box>
+            <Box sx={{ bgcolor: '#0a0d14', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '16px', p: 3, flex: 1, maxWidth: 300 }}>
+              <Typography sx={{ color: '#8b949e', fontSize: '0.85rem', fontWeight: 600, textTransform: 'uppercase', mb: 1 }}>
+                Libraries
+              </Typography>
+              <Typography sx={{ color: '#00E5FF', fontSize: '2.5rem', fontWeight: 800, lineHeight: 1 }}>
+                {userStats.totalLibraries}
+              </Typography>
+            </Box>
+          </Stack>
+
+          <Box>
+            {activeTab === 'books' && (
+              <>
+                {userBooks.length === 0 ? (
+                  <Box sx={{ textAlign: 'center', py: 10, bgcolor: '#0a0d14', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '16px' }}>
+                    <Typography variant="h6" sx={{ color: '#FFFAFA', mb: 1 }}>No books found</Typography>
+                  </Box>
                 ) : (
-                  <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
-                    <FiUser size={24} />
-                  </span>
+                  <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 4 }}>
+                    {userBooks.map(book => {
+                      const safeBook = getSafeBook(book);
+                      return (
+                        <Box key={safeBook._id} sx={{ position: 'relative' }}>
+                          <BookCard book={safeBook} />
+                          <Box sx={{ position: 'absolute', top: 16, right: 16, display: 'flex', gap: 1, zIndex: 10 }}>
+                            <IconButton 
+                              onClick={() => handleEditBook(safeBook)}
+                              sx={{ bgcolor: '#0A0F14', color: '#FFFAFA', border: '1px solid rgba(255,255,255,0.1)', width: 34, height: 34, '&:hover': { bgcolor: '#1A7B8E', borderColor: '#1A7B8E' } }}
+                            >
+                              <FiEdit2 size={14} />
+                            </IconButton>
+                            <IconButton 
+                              onClick={() => handleDeleteBook(safeBook._id)}
+                              sx={{ bgcolor: '#0A0F14', color: '#f85149', border: '1px solid rgba(255,255,255,0.1)', width: 34, height: 34, '&:hover': { bgcolor: '#da3633', color: '#FFFAFA', borderColor: '#da3633' } }}
+                            >
+                              <FiTrash2 size={14} />
+                            </IconButton>
+                          </Box>
+                        </Box>
+                      );
+                    })}
+                  </Box>
                 )}
-              </Link>
-            </div>
-            <div>
-              <h3>{currentUser?.username || 'User'}</h3>
-              <p className="user-email">
-                {currentUser.userId
-                  ? currentUser.userId.slice(0, 5) + '.......' + currentUser.userId.slice(18, -1)
-                  : ''}
-              </p>
-            </div>
-          </div>
-        </div>
-      </aside>
+              </>
+            )}
 
-      <main className="main-content">
-        <Chat />
-
-        <header className="main-header">
-          <div>
-            <h1>{activeTab === 'books' ? 'My Books' : 'My Libraries'}</h1>
-            <p className="subtitle">
-              {activeTab === 'books'
-                ? 'Manage and organize your contributed books'
-                : 'Manage your library collections'}
-            </p>
-          </div>
-        </header>
-
-        <div className="stats-grid">
-          <div className="stat-card primary">
-            <div className="stat-icon"><FiBook /></div>
-            <div className="stat-content">
-              <h3>Total Books</h3>
-              <p className="stat-number">{userStats.totalBooks}</p>
-              <p className="stat-desc">Books you've contributed</p>
-            </div>
-          </div>
-          <div className="stat-card secondary">
-            <div className="stat-icon"><FiBookOpen /></div>
-            <div className="stat-content">
-              <h3>Total Libraries</h3>
-              <p className="stat-number">{userStats.totalLibraries}</p>
-              <p className="stat-desc">Libraries you manage</p>
-            </div>
-          </div>
-        </div>
-
-        <section className="content-section">
-          <div className="section-header">
-            <div>
-              <h2>{activeTab === 'books' ? 'Book Collection' : 'Library Collection'}</h2>
-              <p>
-                {activeTab === 'books'
-                  ? 'All books you have added to the system'
-                  : 'All libraries you have created'}
-              </p>
-            </div>
-            <button
-              className="add-btn"
-              onClick={() => handleOpenCreateForm(activeTab === 'books' ? 'book' : 'library')}
-            >
-              <FiPlus />
-              Add {activeTab === 'books' ? 'Book' : 'Library'}
-            </button>
-          </div>
-
-          {activeTab === 'books' && (
-            <div className="content-grid">
-              {loading.books ? (
-                <div className="loading-content">
-                  <div className="spinner small"></div>
-                  <p>Loading books...</p>
-                </div>
-              ) : userBooks.length === 0 ? (
-                <div className="empty-state">
-                  <div className="empty-icon">📚</div>
-                  <h3>No Books Yet</h3>
-                  <p>Start by adding your first book to the collection</p>
-                  <button className="cta-btn" onClick={() => handleOpenCreateForm('book')}>
-                    <FiPlus />
-                    Add Your First Book
-                  </button>
-                </div>
-              ) : (
-                <div className="books-grid">
-                  {userBooks.map(book => {
-                    const safeBook = getSafeBook(book);
-                    return (
-                      <div key={safeBook._id} className="book-item">
-                        <BookCard book={safeBook} />
-                        <div className="item-actions">
-                          <button
-                            className="action-btn edit"
-                            onClick={() => handleEditBook(safeBook)}
-                            title="Edit book"
-                          >
-                            <FiEdit2 />
-                          </button>
-                          <button
-                            className="action-btn delete"
-                            onClick={() => handleDeleteBook(safeBook._id)}
-                            title="Delete book"
-                          >
-                            <FiTrash2 />
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-
-          {activeTab === 'libraries' && (
-            <div className="content-grid">
-              {loading.libraries ? (
-                <div className="loading-content">
-                  <div className="spinner small"></div>
-                  <p>Loading libraries...</p>
-                </div>
-              ) : userLibraries.length === 0 ? (
-                <div className="empty-state">
-                  <div className="empty-icon">🏛️</div>
-                  <h3>No Libraries Yet</h3>
-                  <p>Create your first library to organize books</p>
-                  <button className="cta-btn" onClick={() => handleOpenCreateForm('library')}>
-                    <FiPlus />
-                    Create Your First Library
-                  </button>
-                </div>
-              ) : (
-                <div className="libraries-grid">
-                  {userLibraries.map(library => {
-                    const safeLibrary = getSafeLibrary(library);
-                    return (
-                      <div key={safeLibrary._id} className="library-item">
-                        <LibraryCard
-                          library={{
-                            _id: safeLibrary._id,
-                            name: safeLibrary.name,
-                            address: safeLibrary.address,
-                            category: safeLibrary.category
-                          }}
-                          onEdit={() => handleEditLibrary(safeLibrary)}
-                          onDelete={() => handleDeleteLibrary(safeLibrary._id)}
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-        </section>
-      </main>
+            {activeTab === 'libraries' && (
+              <>
+                {userLibraries.length === 0 ? (
+                  <Box sx={{ textAlign: 'center', py: 10, bgcolor: '#0a0d14', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '16px' }}>
+                    <Typography variant="h6" sx={{ color: '#FFFAFA', mb: 1 }}>No libraries found</Typography>
+                  </Box>
+                ) : (
+                  <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 4 }}>
+                    {userLibraries.map(library => {
+                      const safeLibrary = getSafeLibrary(library);
+                      return (
+                        <Box key={safeLibrary._id}>
+                          <LibraryCard
+                            library={safeLibrary}
+                            onEdit={() => handleEditLibrary(safeLibrary)}
+                            onDelete={() => handleDeleteLibrary(safeLibrary._id)}
+                          />
+                        </Box>
+                      );
+                    })}
+                  </Box>
+                )}
+              </>
+            )}
+          </Box>
+        </Box>
+      </Box>
 
       {showBookUpdateForm && selectedBook && (
-        <BookUpdateForm
-          book={getSafeBook(selectedBook)}
-          onUpdate={handleBookUpdateSuccess}
-          onClose={() => {
-            setShowBookUpdateForm(false);
-            setSelectedBook(null);
-          }}
-        />
+        <BookUpdateForm book={getSafeBook(selectedBook)} onUpdate={handleBookUpdateSuccess} onClose={() => { setShowBookUpdateForm(false); setSelectedBook(null); }} />
       )}
-
       {showLibraryUpdateForm && selectedLibrary && (
-        <LibraryUpdateForm
-          library={getSafeLibrary(selectedLibrary)}
-          onUpdate={handleLibraryUpdateSuccess}
-          onClose={() => {
-            setShowLibraryUpdateForm(false);
-            setSelectedLibrary(null);
-          }}
-        />
+        <LibraryUpdateForm library={getSafeLibrary(selectedLibrary)} onUpdate={handleLibraryUpdateSuccess} onClose={() => { setShowLibraryUpdateForm(false); setSelectedLibrary(null); }} />
       )}
-
       {showUserUpdateForm && selectedUser && (
-        
-        <UserUpdateForm
-          user={getSafeUser(selectedUser)}
-          onUpdate={handleUserUpdateSuccess}
-          onDelete={handleDeleteAccount}
-          onClose={() => setShowUserUpdateForm(false)}
-        />
+        <UserUpdateForm user={getSafeUser(selectedUser)} onUpdate={handleUserUpdateSuccess} onDelete={handleDeleteAccount} onClose={() => setShowUserUpdateForm(false)} />
       )}
-
       {showCreateForm && (
-        <BookCreateForm
-          onSuccess={handleCreateSuccess}
-          onClose={() => {
-            setShowCreateForm(false);
-            setCreateType('book');
-          }}
-          category={createType}
-        />
+        <BookCreateForm onSuccess={handleCreateSuccess} onClose={() => { setShowCreateForm(false); setCreateType('book'); }} category={createType} />
       )}
-
-      <style jsx>{`
-        .dashboard-container {
-          display: flex;
-          min-height: 100vh;
-          background: #0d1117;
-          color: #fff;
-        }
-
-        .sidebar {
-          width: 280px;
-          background: linear-gradient(180deg, #161b22 0%, #0d1117 100%);
-          border-right: 1px solid rgba(255, 255, 255, 0.1);
-          display: flex;
-          flex-direction: column;
-          padding: 24px 0 0 0;
-          position: sticky;
-          top: 0;
-          height: 100vh;
-        }
-
-        .sidebar-header {
-          padding: 0 24px 24px;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .user-info {
-          display: flex;
-          align-items: center;
-          gap: 15px;
-          margin-top: 5px;
-          width: 100%;
-          justify-content: flex-start;
-        }
-
-        .sidebar-nav {
-          flex: 1;
-          padding: 24px 0;
-          overflow-y: auto;
-          scrollbar-width: thin;
-          scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
-        }
-
-        .sidebar-nav::-webkit-scrollbar { width: 6px; }
-        .sidebar-nav::-webkit-scrollbar-track { background: transparent; }
-        .sidebar-nav::-webkit-scrollbar-thumb {
-          background-color: rgba(255, 255, 255, 0.1);
-          border-radius: 3px;
-        }
-        .sidebar-nav::-webkit-scrollbar-thumb:hover {
-          background-color: rgba(255, 255, 255, 0.2);
-        }
-
-        .user-avatar {
-          height: 40px;
-          border-radius: 50%;
-          display: flex;
-          align-items: flex-start;
-          justify-content: flex-start;
-        }
-
-        .user-info h3 {
-          margin: 0;
-          font-size: 1rem;
-          font-weight: 600;
-        }
-
-        .user-email {
-          margin: 4px 0 0;
-          color: #8b949e;
-          font-size: 0.85rem;
-        }
-
-        .nav-section {
-          margin-bottom: 32px;
-          padding: 0 24px;
-        }
-
-        .section-title {
-          color: #8b949e;
-          font-size: 0.8rem;
-          text-transform: uppercase;
-          letter-spacing: 1px;
-          margin: 0 0 16px;
-          font-weight: 600;
-        }
-
-        .section-title-profile {
-          color: #8b949e;
-          font-size: 0.8rem;
-          text-transform: uppercase;
-          letter-spacing: 1px;
-          margin: 20px 0 10px;
-          font-weight: 600;
-        }
-
-        .brand-header {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          justify-content: flex-start;
-          width: 100%;
-        }
-
-        .brand-name {
-          font-size: 1.7rem;
-          font-weight: 700;
-          color: #fff;
-          letter-spacing: 2px;
-          margin-bottom: 10px;
-        }
-
-        .logo-icon {
-          width: 32px;
-          height: 32px;
-          background: linear-gradient(135deg, #58a6ff, #238636);
-          border-radius: 8px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: white;
-          margin-bottom: 10px;
-        }
-
-        .nav-btn {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          width: 100%;
-          padding: 12px 16px;
-          background: transparent;
-          border: none;
-          border-radius: 8px;
-          color: #c9d1d9;
-          font-size: 0.95rem;
-          font-weight: 500;
-          cursor: pointer;
-          transition: all 0.2s;
-          margin-bottom: 4px;
-        }
-
-        .nav-btn:hover {
-          background: rgba(255, 255, 255, 0.05);
-          color: #fff;
-        }
-
-        .nav-btn.active {
-          background: rgba(88, 166, 255, 0.1);
-          color: #58a6ff;
-          border-left: 3px solid #58a6ff;
-        }
-
-        .nav-count {
-          margin-left: auto;
-          background: rgba(255, 255, 255, 0.1);
-          color: #fff;
-          padding: 2px 8px;
-          border-radius: 12px;
-          font-size: 0.8rem;
-          font-weight: 600;
-          min-width: 24px;
-          text-align: center;
-        }
-
-        .create-btn {
-          background: rgba(46, 160, 67, 0.1);
-          color: #2ea043;
-          border: 1px solid rgba(46, 160, 67, 0.2);
-        }
-
-        .create-btn:hover {
-          background: rgba(46, 160, 67, 0.2);
-        }
-
-        .sidebar-footer {
-          padding: 24px;
-          border-top: 1px solid rgba(255, 255, 255, 0.1);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          flex-direction: column;
-          gap: 10px;
-        }
-
-        .main-content {
-          flex: 1;
-          padding: 32px;
-          overflow-y: auto;
-          margin-left:0px
-        }
-
-        .main-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          margin-bottom: 40px;
-        }
-
-        .main-header h1 {
-          margin: 0 0 8px;
-          font-size: 2.25rem;
-          font-weight: 700;
-          background: linear-gradient(90deg, #58a6ff, #1f6feb);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
-        }
-
-        .subtitle {
-          color: #8b949e;
-          margin: 0;
-          font-size: 1rem;
-        }
-
-        .stats-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-          gap: 20px;
-          margin-bottom: 40px;
-        }
-
-        .stat-card {
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          border-radius: 16px;
-          padding: 24px;
-          display: flex;
-          align-items: center;
-          gap: 20px;
-          transition: transform 0.2s, border-color 0.2s;
-        }
-
-        .stat-card:hover {
-          transform: translateY(-4px);
-          border-color: rgba(88, 166, 255, 0.3);
-        }
-
-        .stat-card.primary { border-left: 4px solid #58a6ff; }
-        .stat-card.secondary { border-left: 4px solid #2ea043; }
-
-        .stat-icon {
-          width: 56px;
-          height: 56px;
-          background: rgba(255, 255, 255, 0.1);
-          border-radius: 12px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 1.5rem;
-        }
-
-        .stat-card.primary .stat-icon { background: rgba(88, 166, 255, 0.2); color: #58a6ff; }
-        .stat-card.secondary .stat-icon { background: rgba(46, 160, 67, 0.2); color: #2ea043; }
-
-        .stat-content { flex: 1; }
-
-        .stat-content h3 {
-          margin: 0 0 8px;
-          font-size: 0.9rem;
-          color: #8b949e;
-          font-weight: 500;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-        }
-
-        .stat-number {
-          margin: 0 0 4px;
-          font-size: 2rem;
-          font-weight: 700;
-          color: #fff;
-        }
-
-        .stat-desc { margin: 0; color: #8b949e; font-size: 0.9rem; }
-
-        .content-section {
-          background: rgba(255, 255, 255, 0.02);
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          border-radius: 20px;
-          padding: 32px;
-        }
-
-        .section-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 32px;
-        }
-
-        .section-header h2 {
-          margin: 0 0 8px;
-          font-size: 1.5rem;
-          font-weight: 600;
-          color: #fff;
-        }
-
-        .section-header p { margin: 0; color: #8b949e; font-size: 0.95rem; }
-
-        .add-btn {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          padding: 12px 24px;
-          background: linear-gradient(90deg, #58a6ff, #1f6feb);
-          border: none;
-          border-radius: 12px;
-          color: #fff;
-          font-size: 0.95rem;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.2s;
-        }
-
-        .add-btn:hover {
-          filter: brightness(1.1);
-          transform: translateY(-2px);
-        }
-
-        .content-grid { min-height: 300px; }
-
-        .loading-content {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          padding: 60px 20px;
-        }
-
-        .loading-content p { margin-top: 16px; color: #8b949e; }
-
-        .empty-state { text-align: center; padding: 60px 20px; }
-        .empty-icon { font-size: 3rem; margin-bottom: 20px; }
-        .empty-state h3 { margin: 0 0 12px; font-size: 1.5rem; color: #fff; }
-        .empty-state p {
-          margin: 0 0 24px;
-          color: #8b949e;
-          max-width: 400px;
-          margin-left: auto;
-          margin-right: auto;
-        }
-
-        .cta-btn {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          padding: 14px 28px;
-          background: linear-gradient(90deg, #58a6ff, #1f6feb);
-          border: none;
-          border-radius: 12px;
-          color: #fff;
-          font-size: 0.95rem;
-          font-weight: 600;
-          cursor: pointer;
-          margin: 0 auto;
-          transition: all 0.2s;
-        }
-
-        .cta-btn:hover {
-          filter: brightness(1.1);
-          transform: translateY(-2px);
-        }
-
-        .books-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-          gap: 24px;
-        }
-
-        .book-item { position: relative; }
-
-        .item-actions {
-          position: absolute;
-          top: 12px;
-          right: 12px;
-          display: flex;
-          gap: 8px;
-          z-index: 10;
-        }
-
-        .action-btn {
-          width: 36px;
-          height: 36px;
-          border-radius: 8px;
-          border: none;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-          transition: all 0.2s;
-          font-size: 0.9rem;
-        }
-
-        .action-btn.edit { background: rgba(88, 166, 255, 0.2); color: #58a6ff; }
-        .action-btn.edit:hover { background: rgba(88, 166, 255, 0.3); transform: scale(1.1); }
-        .action-btn.delete { background: rgba(248, 81, 73, 0.2); color: #ff7b72; }
-        .action-btn.delete:hover { background: rgba(248, 81, 73, 0.3); transform: scale(1.1); }
-
-        .libraries-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-          gap: 24px;
-        }
-
-        .library-item { transition: transform 0.2s; }
-        .library-item:hover { transform: translateY(-4px); }
-
-        .spinner {
-          width: 50px;
-          height: 50px;
-          border: 3px solid rgba(255, 255, 255, 0.1);
-          border-radius: 50%;
-          border-top-color: #58a6ff;
-          animation: spin 1s ease-in-out infinite;
-        }
-
-        .spinner.small { width: 30px; height: 30px; }
-
-        @keyframes spin { to { transform: rotate(360deg); } }
-
-        @media (max-width: 1024px) {
-          .dashboard-container { flex-direction: column; }
-          .sidebar { width: 100%; height: auto; position: relative; padding: 16px; }
-          .sidebar-nav { padding: 16px 0; }
-          .stats-grid { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
-        }
-
-        @media (max-width: 768px) {
-          .main-content { padding: 20px; }
-          .main-header { flex-direction: column; gap: 16px; align-items: stretch; }
-          .section-header { flex-direction: column; gap: 16px; align-items: stretch; text-align: center; }
-          .add-btn { justify-content: center; }
-          .books-grid, .libraries-grid { grid-template-columns: 1fr; }
-          .stats-grid { grid-template-columns: 1fr; }
-        }
-      `}</style>
-    </div>
+    </Box>
   );
 }

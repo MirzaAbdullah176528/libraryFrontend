@@ -94,7 +94,7 @@ const LoginPage = ({
             display: 'grid',
             placeItems: 'center',
             padding: '24px',
-            backgroundImage: 'linear-gradient(10deg, rgba(0, 229, 255 , 0.1) , #0A0F14)',            
+            backgroundImage: 'linear-gradient(180deg, rgb(0, 229, 255) , #0A0F14)',            
         }}>
             <Box sx={{
                 width: '100%',

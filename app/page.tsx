@@ -5,8 +5,14 @@ import { useRouter } from 'next/navigation';
 import { apiService, authService } from '../service/api';
 import BookCard from './components/bookCard';
 import LibraryCard from './components/libraryCard';
-import { FiLogOut, FiLayers } from 'react-icons/fi';
-import { Box, Typography, Button, IconButton, Stack } from '@mui/material';
+import { FiLogOut, FiLayers, FiSearch } from 'react-icons/fi';
+import { Box, Typography, Button, IconButton, Stack, TextField, InputAdornment, FormControl } from '@mui/material';
+import { RadioGroup } from '@mui/material';
+import { Radio } from '@mui/material';
+import { FormControlLabel } from '@mui/material';
+import { FormLabel } from '@mui/material';
+import Hero from './hero/page'
+
 
 interface Book {
   _id: string;
@@ -74,7 +80,7 @@ const AnimatedNavbar = ({
   const showNavItems = stage === 'completed';
 
   const navButtonStyle = (isActive: boolean) => ({
-    color: isActive ? '#ffffff' : '#8b949e',
+    color: isActive ? '#FFFAFAff' : '#b0b8c1',
     background: 'transparent',
     textTransform: 'none',
     fontWeight: 600,
@@ -92,12 +98,12 @@ const AnimatedNavbar = ({
       bottom: 0,
       left: '50%',
       transform: 'translateX(-50%)',
-      bgcolor: '#1A7B8E',
+      bgcolor: '#0A0F14',
       transition: 'width 0.3s ease',
     },
     '&:hover': {
       background: 'transparent',
-      color: '#ffffff',
+      color: '#FFFAFAff',
     },
     '&:hover::after': {
       width: '100%',
@@ -112,7 +118,7 @@ const AnimatedNavbar = ({
       transform: isNavbar ? 'translate(0, 0)' : 'translate(-50%, -50%)',
       width: isNavbar ? '100%' : '450px',
       height: isNavbar ? '72px' : '337px',
-      backgroundImage: 'linear-gradient(180deg, rgba(0, 229, 255, 0.3 ) , #161b22)', 
+      backgroundColor:'#1A7B8E', 
       borderRadius: isNavbar ? 0 : '16px',
       border: isNavbar ? 'none' : '1px solid rgba(255,255,255,0.08)',
       borderBottom: '1px solid rgba(255,255,255,0.08)',
@@ -161,7 +167,7 @@ const AnimatedNavbar = ({
         transition: 'all 1s cubic-bezier(0.85, 0, 0.15, 1)',
         display: 'flex',
         flexDirection: 'column',
-        alignItems: 'center'
+        alignItems: 'center',
       }}>
         
         <Stack 
@@ -173,12 +179,12 @@ const AnimatedNavbar = ({
           <Box sx={{
             width: isNavbar ? 32 : 64, 
             height: isNavbar ? 32 : 64,
-            bgcolor: '#8b949e',
+            bgcolor: '#135d6c',
             borderRadius: isNavbar ? '8px' : '16px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: 'white',
+            backgroundImage: 'linear-gradient(180deg, rgb(0, 229, 255) , #0A0F14)',
             transition: 'all 1s cubic-bezier(0.85, 0, 0.15, 1)',
             fontSize: isNavbar ? '1.2rem' : '2.5rem'
           }}>
@@ -187,7 +193,7 @@ const AnimatedNavbar = ({
           <Typography sx={{
             fontSize: isNavbar ? '1.7rem' : '3.5rem',
             fontWeight: 800,
-            color: '#8b949e',
+            color: '#FFFAFA',
             letterSpacing: '2px',
             transition: 'font-size 1s cubic-bezier(0.85, 0, 0.15, 1)',
             display: 'flex',
@@ -255,27 +261,42 @@ export default function Home() {
   const [libraries, setLibraries] = useState<Library[]>([]);
   const [view, setView] = useState<'books' | 'libraries'>('books');
   const [navbarStage, setNavbarStage] = useState<Stage>('typing');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [searchValue, setSearchValue] = useState<string>("name");
+
+  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchValue((event.target as HTMLInputElement).value);
+  };
 
   const fetchData = useCallback(async () => {
     try {
+      const queryParam: Record<string, string> = searchQuery.trim() 
+        ? { 
+            [searchValue]: searchQuery.trim()
+          } 
+        : {};
+
       if (view === 'books') {
-        const res = await apiService.getBooks({});
+        const res = await apiService.getBooks(queryParam);
         setBooks(res.result || []);
       } else {
-        const res = await apiService.getLibraries({});
+        const res = await apiService.getLibraries(queryParam);
         setLibraries(res || []);
       }
     } catch (error) {
       console.error(error);
     }
-  }, [view]);
+  }, [view, searchQuery, searchValue]);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) {
       router.push('/login');
     } else {
-      fetchData();
+      const timeoutId = setTimeout(() => {
+        fetchData();
+      }, 300);
+      return () => clearTimeout(timeoutId);
     }
   }, [router, view, fetchData]);
 
@@ -286,7 +307,7 @@ export default function Home() {
   const isReady = navbarStage === 'completed';
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: '#0a0a0a' }}>
+    <Box sx={{ minHeight: '100vh', bgcolor: '#FFFAFA' }}>
       <AnimatedNavbar
         stage={navbarStage}
         setStage={setNavbarStage}
@@ -308,17 +329,29 @@ export default function Home() {
           opacity: isReady ? 1 : 0,
           pointerEvents: isReady ? 'auto' : 'none',
           transition: 'opacity 0.8s ease 0.2s',
+          backgroundImage: 'linear-gradient(10deg, rgba(0, 229, 255 , 0.1) , #0A0F14)',
+          minHeight:'100vh',
+          maxHeight:'100%'
         }}
       >
+      {/* <Box sx={{
+        width:'100vw',
+        position:'absolute',
+        right:0,
+        top:0
+      }}>
+        <Hero/>
+      </Box> */}
         <Box>
           <Typography variant="h4" sx={{ color: 'white', fontWeight: 700, mb: 1 }}>
             {view === 'books' ? 'The Collection' : 'Library Network'}
           </Typography>
-          <Typography sx={{ color: '#8b949e', fontSize: '1rem' }}>
+          <Typography sx={{ color: '#8b949e', fontSize: '1rem', mb: 3 }}>
             {view === 'books'
               ? 'Explore the curated list of available resources.'
               : 'Find a branch near you to visit.'}
           </Typography>
+
         </Box>
 
         {view === 'books' ? (
