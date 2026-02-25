@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { FiX } from 'react-icons/fi';
 import { apiService } from '../../service/api';
+import { Upload } from 'lucide-react';
 
 interface Book {
   _id: string;
@@ -21,16 +22,30 @@ interface BookUpdateFormProps {
 }
 
 const BookUpdateForm = ({ book, onUpdate, onClose }: BookUpdateFormProps) => {
-  const [formData, setFormData] = useState({
+  const [formValues, setFormValues] = useState({
     name: book.name,
     category: book.category,
-    author: book.author
+    author: book.author || ''
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [previewUrl, setPreviewUrl] = useState<string | null>(book.image || null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    setFormValues({ ...formValues, [e.target.name]: e.target.value });
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setSelectedFile(file);
+
+      if (previewUrl && !previewUrl.startsWith('http')) {
+        URL.revokeObjectURL(previewUrl);
+      }
+      setPreviewUrl(URL.createObjectURL(file));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -39,11 +54,24 @@ const BookUpdateForm = ({ book, onUpdate, onClose }: BookUpdateFormProps) => {
     setError('');
 
     try {
-      const updatedBook = await apiService.updateBook(book._id, formData);
+      const submitData = new FormData();
+      submitData.append('name', formValues.name);
+      submitData.append('category', formValues.category);
+      submitData.append('author', formValues.author);
+      
+      if (selectedFile) {
+        submitData.append('image', selectedFile);
+      }
+
+      const updatedBook = await apiService.updateBook(book._id, submitData as any);
       onUpdate(updatedBook);
       onClose();
-    } catch (err: any) {
-      setError(err.message || 'Failed to update book');
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('Failed to update book');
+      }
     } finally {
       setLoading(false);
     }
@@ -72,7 +100,7 @@ const BookUpdateForm = ({ book, onUpdate, onClose }: BookUpdateFormProps) => {
               type="text"
               id="name"
               name="name"
-              value={formData.name}
+              value={formValues.name}
               onChange={handleChange}
               required
               placeholder="Enter book title"
@@ -85,7 +113,7 @@ const BookUpdateForm = ({ book, onUpdate, onClose }: BookUpdateFormProps) => {
               type="text"
               id="category"
               name="category"
-              value={formData.category}
+              value={formValues.category}
               onChange={handleChange}
               required
               placeholder="e.g., Fiction, Science, History"
@@ -98,11 +126,33 @@ const BookUpdateForm = ({ book, onUpdate, onClose }: BookUpdateFormProps) => {
               type="text"
               id="author"
               name="author"
-              value={formData.author}
+              value={formValues.author}
               onChange={handleChange}
               required
-              placeholder="Gorge Orwell , Franz Kafka"
+              placeholder="George Orwell, Franz Kafka"
             />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="image">Cover Image</label>
+            <div className="file-input-wrapper">
+              <input
+                type="file"
+                id="image"
+                accept="image/*"
+                onChange={handleFileChange}
+                className="file-input"
+              />
+              <div className="file-label">
+                <Upload size={20} />
+                <span>{selectedFile ? selectedFile.name : "Choose an image file..."}</span>
+              </div>
+            </div>
+            {previewUrl && (
+              <div className="image-preview">
+                <img src={previewUrl} alt="Preview" />
+              </div>
+            )}
           </div>
 
           <div className="form-footer">
@@ -138,6 +188,8 @@ const BookUpdateForm = ({ book, onUpdate, onClose }: BookUpdateFormProps) => {
           max-width: 500px;
           border: 1px solid rgba(255, 255, 255, 0.1);
           box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+          max-height: 90vh;
+          overflow-y: auto;
         }
 
         .modal-header {
@@ -146,6 +198,10 @@ const BookUpdateForm = ({ book, onUpdate, onClose }: BookUpdateFormProps) => {
           align-items: center;
           padding: 24px;
           border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+          position: sticky;
+          top: 0;
+          background: #161b22;
+          z-index: 10;
         }
 
         .modal-header h3 {
@@ -189,8 +245,7 @@ const BookUpdateForm = ({ book, onUpdate, onClose }: BookUpdateFormProps) => {
           font-weight: 500;
         }
 
-        .form-group input,
-        .form-group select {
+        .form-group input[type="text"] {
           width: 100%;
           background: #0d1117;
           border: 1px solid #30363d;
@@ -201,12 +256,63 @@ const BookUpdateForm = ({ book, onUpdate, onClose }: BookUpdateFormProps) => {
           transition: all 0.2s;
         }
 
-        .form-group input:focus,
-        .form-group select:focus {
+        .form-group input[type="text"]:focus {
           outline: none;
           border-color: #58a6ff;
           box-shadow: 0 0 0 4px rgba(88, 166, 255, 0.1);
           background: #161b22;
+        }
+
+        .file-input-wrapper {
+          position: relative;
+          background: #0d1117;
+          border: 1px dashed #30363d;
+          border-radius: 12px;
+          padding: 24px;
+          text-align: center;
+          transition: all 0.2s;
+          cursor: pointer;
+        }
+
+        .file-input-wrapper:hover {
+          border-color: #58a6ff;
+          background: #161b22;
+        }
+
+        .file-input {
+          position: absolute;
+          inset: 0;
+          width: 100%;
+          height: 100%;
+          opacity: 0;
+          cursor: pointer;
+        }
+
+        .file-label {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 12px;
+          color: #8b949e;
+          font-size: 0.9rem;
+        }
+
+        .image-preview {
+          margin-top: 16px;
+          border-radius: 12px;
+          overflow: hidden;
+          border: 1px solid #30363d;
+          display: flex;
+          justify-content: center;
+          background: #0d1117;
+          padding: 8px;
+        }
+
+        .image-preview img {
+          max-width: 100%;
+          height: 160px;
+          object-fit: contain;
+          border-radius: 8px;
         }
 
         .form-footer {

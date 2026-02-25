@@ -69,15 +69,15 @@ const LoginPage = ({
 
         try {
             const action = isSignup ? authService.signup : authService.login;
-            const data = await action(formData);
-
-            if (data?.token) {
-                localStorage.setItem('token', data.token);
-            }
-            
+            if(formData.password.length >= 6 && formData.Username.length >= 6){
+                const data =await action(formData);
+                if (data?.token) {
+                    localStorage.setItem('token', data.token);
+                }
             const nextPath = (isSignup && !data.token) ? '/login' : '/';
             triggerExitAnimationAndNavigate(nextPath);
-
+            }
+            setError('UserName and password should be longer then 6')
         } catch (err: any) {
             setError(err.message || 'An error occurred');
             setLoading(false);

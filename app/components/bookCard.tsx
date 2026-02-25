@@ -36,32 +36,51 @@ const randomBookCovers: string[] = [
   "https://images.unsplash.com/photo-1550399105-c4db5fb85c18?q=80&w=800&auto=format&fit=crop"
 ];
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
 const BookCard = ({ book }: { book: BookProps }) => {
   const [summaryData, setSummaryData] = useState<Summary>();
-  const [coverImage, setCoverImage] = useState<string>(randomBookCovers[0]);
   
-  // New state variables for the summary popup
+  const getInitialImage = (): string => {
+    if (!book.image) return randomBookCovers[0];
+    if (book.image.startsWith('http')) return book.image;
+    const separator = book.image.startsWith('/') ? '' : '/';
+    return `${API_URL}${separator}${book.image}`;
+  };
+
+  const [coverImage, setCoverImage] = useState<string>(getInitialImage());
   const [isSummaryOpen, setIsSummaryOpen] = useState(false);
   const [isLoadingSummary, setIsLoadingSummary] = useState(false);
   const [summaryText, setSummaryText] = useState<string>('');
 
   useEffect(() => {
-    const bookData = {
+    setSummaryData({
       name: book.name,
       author: book.author || '',
       category: book.category
-    };
-    setSummaryData(bookData);
+    });
 
+    if (book.image) {
+      const formattedImage = book.image.startsWith('http') 
+        ? book.image 
+        : `${API_URL}${book.image.startsWith('/') ? '' : '/'}${book.image}`;
+      setCoverImage(formattedImage);
+    } else {
+      const randomIndex = Math.floor(Math.random() * randomBookCovers.length);
+      setCoverImage(randomBookCovers[randomIndex]);
+    }
+  }, [book]);
+
+  const handleImageError = () => {
     const randomIndex = Math.floor(Math.random() * randomBookCovers.length);
     setCoverImage(randomBookCovers[randomIndex]);
-  }, [book]);
+  };
 
   const getSummary = async () => {
     if (summaryData && summaryData.name && summaryData.category) {
       setIsSummaryOpen(true);
       setIsLoadingSummary(true);
-      setSummaryText(''); // Clear previous summary
+      setSummaryText(''); 
       
       try {
         const response = await apiService.getSummary({
@@ -70,7 +89,6 @@ const BookCard = ({ book }: { book: BookProps }) => {
           author: summaryData.author || 'Not specified'
         });
         
-        // Extracting text from response (adjust this based on your exact API return structure)
         const fetchedSummary = typeof response === 'string' 
           ? response 
           : (response?.summary || response?.data || 'Summary generated successfully, but format is unrecognized.');
@@ -104,9 +122,7 @@ const BookCard = ({ book }: { book: BookProps }) => {
           className="book-cover"
           image={coverImage}
           alt={book.name}
-          onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-            e.currentTarget.src = "/reading books is a key of success.webp";
-          }}
+          onError={handleImageError}
           sx={{ 
             position: 'absolute',
             inset: 0,
@@ -165,7 +181,7 @@ const BookCard = ({ book }: { book: BookProps }) => {
               transition: 'background-color 0.2s',
               border: '1px solid rgba(255,255,255,0.1)',
               '&:hover': {
-                bgcolor: 'rgba(0, 229, 255, 0.2)', // Matches the cyan theme on hover
+                bgcolor: 'rgba(0, 229, 255, 0.2)',
                 borderColor: 'rgba(0, 229, 255, 0.4)'
               }
             }}
@@ -198,7 +214,7 @@ const BookCard = ({ book }: { book: BookProps }) => {
                 fontWeight: 700,
                 lineHeight: 1.2,
                 transition: 'color 0.2s',
-                '&:hover': { color: '#00E5FF' } // Shifted to match your cyan theme
+                '&:hover': { color: '#00E5FF' }
               }}
             >
               {book.name.length < 40 ? book.name : book.name.slice(0, 40) + '...'}
@@ -229,7 +245,6 @@ const BookCard = ({ book }: { book: BookProps }) => {
           </Stack>
         </Box>
       </Card>
-
 
       <Dialog 
         open={isSummaryOpen} 
